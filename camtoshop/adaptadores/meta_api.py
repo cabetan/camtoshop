@@ -135,6 +135,28 @@ class ClienteMeta:
             cuadros[n] = [Caja(*map(int, g)) for g in _RE_CAJA.findall(linea)]
         return cuadros
 
+    # --- Muse Voice Transcribe --------------------------------------------
+
+    def transcribir(self, wav: Path, idiomas: list[str] | None = None,
+                    palabras_clave: list[str] | None = None) -> dict:
+        """Devuelve {'transcript', 'turns': [{startMs, endMs, transcript}]}.
+
+        El WAV debe ser mono, PCM de 16 bits a 16 o 24 kHz.
+        """
+        ajustes: dict = {"mode": "ENDPOINTING", "model": "muse-voice-transcribe-1.0", "audioEncoding": "WAV"}
+        if idiomas:
+            ajustes["languageBias"] = idiomas
+        if palabras_clave:
+            ajustes["keywords"] = palabras_clave
+        with wav.open("rb") as audio:
+            r = self._sesion.post(f"{URL_BASE}/asr/transcribe", timeout=self._tiempo, files={
+                "request": (None, json.dumps(ajustes), "application/json"),
+                "audio": (wav.name, audio, "audio/wav"),
+            })
+        if not r.ok:
+            raise RuntimeError(f"Voice Transcribe respondió {r.status_code}: {r.text[:500]}")
+        return r.json()
+
     # --- Muse Image -------------------------------------------------------
 
     def generar_imagen(self, prompt: str, destino: Path, tamano: str = "1024x1024") -> Path:
