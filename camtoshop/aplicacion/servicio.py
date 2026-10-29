@@ -28,7 +28,7 @@ from camtoshop.adaptadores.reel_meta import (
 )
 from camtoshop.adaptadores.render_ffmpeg import RenderizadorFFmpeg
 from camtoshop.adaptadores.sam_mascaras import mascaras
-from camtoshop.adaptadores.shopify import TiendaShopify
+from camtoshop.adaptadores.shopify import TiendaShopify, token_por_credenciales
 from camtoshop.dominio.anuncios import normalizar_anuncios
 from camtoshop.dominio.direccion import LOOK_POR_DEFECTO, LOOKS, Propuesta, armar_plan, centros_de_zoom
 from camtoshop.dominio.editar_reel import Montaje, Puertos, ResultadoReel, dirigir_y_revisar, preparar_montaje, rehacer
@@ -330,8 +330,12 @@ class Servicio:
         reel = pr.ruta(pr.estado["reels"][pr.estado["look"]]["archivo"])
         # Publicar en vivo es una decisión explícita: sin CAMTOSHOP_EN_VIVO=si todo queda en borrador.
         borrador = (secreto("CAMTOSHOP_EN_VIVO") or "").lower() != "si"
-        tienda = TiendaShopify(secreto("SHOPIFY_TIENDA"), secreto("SHOPIFY_TOKEN"), borrador=borrador) \
-            if canal_conectado("shopify") else None
+        tienda = None
+        if canal_conectado("shopify"):
+            dominio = secreto("SHOPIFY_TIENDA")
+            token = secreto("SHOPIFY_TOKEN") or token_por_credenciales(
+                dominio, secreto("SHOPIFY_CLIENT_ID"), secreto("SHOPIFY_CLIENT_SECRET"))
+            tienda = TiendaShopify(dominio, token, borrador=borrador)
         catalogo = CatalogoMeta(secreto("META_CATALOGO_ID"), secreto("META_TOKEN"),
                                 secreto("SHOPIFY_DOMINIO_PUBLICO") or "", borrador=borrador) \
             if canal_conectado("catalogo_meta") else None

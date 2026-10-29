@@ -5,9 +5,9 @@ from __future__ import annotations
 import os
 import subprocess
 
-# Lo que necesita cada canal para estar "conectado".
+# Lo que necesita cada canal para estar "conectado". Shopify acepta dos formas (ver shopify.py).
 CANALES = {
-    "shopify": ("SHOPIFY_TIENDA", "SHOPIFY_TOKEN"),
+    "shopify": ("SHOPIFY_TIENDA", "SHOPIFY_CLIENT_ID", "SHOPIFY_CLIENT_SECRET"),
     "catalogo_meta": ("META_CATALOGO_ID", "META_TOKEN"),
     "instagram": ("IG_USUARIO_ID", "META_TOKEN"),
 }
@@ -28,4 +28,6 @@ def secreto(nombre: str) -> str | None:
 
 
 def canal_conectado(canal: str) -> bool:
+    if canal == "shopify" and secreto("SHOPIFY_TIENDA") and secreto("SHOPIFY_TOKEN"):
+        return True  # app personalizada antigua con token fijo
     return all(secreto(n) for n in CANALES[canal])

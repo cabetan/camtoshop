@@ -1,8 +1,10 @@
 """Tienda Shopify por la Admin GraphQL API.
 
 Crea el producto con su precio, sube las fotos y el Reel con staged uploads y lo publica en la
-tienda en línea. Requiere una app personalizada con los permisos write_products, write_files y
-write_publications (SHOPIFY_TIENDA = mitienda.myshopify.com, SHOPIFY_TOKEN = shpat_…).
+tienda en línea. Requiere una app del Dev Dashboard instalada en la tienda, con los permisos
+write_products, write_files y write_publications. Se autentica con el client credentials grant
+(SHOPIFY_CLIENT_ID y SHOPIFY_CLIENT_SECRET), que da un token de 24 horas; también acepta un
+token fijo de app personalizada antigua (SHOPIFY_TOKEN = shpat_…).
 
 Por defecto crea el producto como borrador: no aparece en la tienda hasta que el comerciante
 lo revise y lo publique. Así se puede usar con la tienda real de un cliente sin riesgo.
@@ -20,7 +22,17 @@ import requests
 from camtoshop.dominio.producto import Ficha
 from camtoshop.dominio.publicacion import EnTienda
 
-VERSION = "2025-10"
+VERSION = "2026-10"
+
+
+def token_por_credenciales(tienda: str, cliente_id: str, secreto: str) -> str:
+    """Client credentials grant: la app del Dev Dashboard pide un token de acceso de 24 horas."""
+    r = requests.post(f"https://{tienda}/admin/oauth/access_token", timeout=30, data={
+        "grant_type": "client_credentials", "client_id": cliente_id, "client_secret": secreto,
+    })
+    if not r.ok:
+        raise RuntimeError(f"Shopify no entregó el token ({r.status_code}): {r.text[:200]}")
+    return r.json()["access_token"]
 
 
 class TiendaShopify:
@@ -70,6 +82,10 @@ class TiendaShopify:
     # --- Producto -----------------------------------------------------------
 
     def publicar_producto(self, ficha: Ficha, video: Path | None) -> EnTienda:
+        moneda = self._gql("{ shop { currencyCode } }")["shop"]["currencyCode"]
+        if ficha.precio.moneda != moneda:
+            raise ValueError(f"La tienda vende en {moneda} y el precio de la ficha está en "
+                             f"{ficha.precio.moneda}: ajusta el precio antes de publicar.")
         t = ficha.principal
         cuerpo = f"<p>{html.escape(t.descripcion)}</p>"
         if t.puntos:
