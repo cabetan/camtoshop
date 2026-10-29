@@ -91,19 +91,24 @@ class TiendaShopify:
         if t.puntos:
             cuerpo += "<ul>" + "".join(f"<li>{html.escape(p)}</li>" for p in t.puntos) + "</ul>"
 
-        medios = [{"originalSource": self._subir(Path(r), "IMAGE"), "mediaContentType": "IMAGE",
-                   "alt": t.titulo} for r in ficha.imagenes]
-        if video:
-            medios.append({"originalSource": self._subir(video, "VIDEO"), "mediaContentType": "VIDEO",
-                           "alt": t.titulo})
+        # Volver a publicar actualiza el mismo producto (por su handle) en vez de fallar o duplicarlo.
+        existente = self._gql("query($h: String!) { productByHandle(handle: $h) { id } }",
+                              {"h": ficha.identificador})["productByHandle"]
+        medios = []
+        if existente is None:  # las fotos y el Reel se suben solo la primera vez
+            medios = [{"originalSource": self._subir(Path(r), "IMAGE"), "mediaContentType": "IMAGE",
+                       "alt": t.titulo} for r in ficha.imagenes]
+            if video:
+                medios.append({"originalSource": self._subir(video, "VIDEO"), "mediaContentType": "VIDEO",
+                               "alt": t.titulo})
 
         datos = self._gql("""
-            mutation($producto: ProductSetInput!) {
-              productSet(input: $producto, synchronous: true) {
+            mutation($producto: ProductSetInput!, $clave: ProductSetIdentifiers) {
+              productSet(input: $producto, identifier: $clave, synchronous: true) {
                 product { id handle onlineStorePreviewUrl }
                 userErrors { message }
               }
-            }""", {"producto": {
+            }""", {"clave": {"handle": ficha.identificador}, "producto": {
                 "title": t.titulo,
                 "descriptionHtml": cuerpo,
                 "handle": ficha.identificador,
