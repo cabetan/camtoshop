@@ -35,10 +35,15 @@
   .tarjeta { background: var(--panel); border: 1px solid var(--borde); border-radius: var(--radio); padding: 16px; cursor: pointer; text-decoration: none; color: inherit; display: block; }
   .tarjeta:hover { border-color: var(--acento); }
   .tarjeta .fase { font-size: 12px; text-transform: uppercase; letter-spacing: 1px; color: var(--suave); }
-  .proyecto { display: grid; grid-template-columns: 380px 1fr; gap: 28px; align-items: start; }
+  .proyecto { display: grid; grid-template-columns: 340px 1fr; gap: 28px; align-items: start; }
   @media (max-width: 900px) { .proyecto { grid-template-columns: 1fr; } }
-  .telefono { background: #000; border-radius: 34px; padding: 10px; border: 1px solid var(--borde); position: sticky; top: 16px; }
-  .telefono video, .telefono .vacio { width: 100%; aspect-ratio: 9/16; border-radius: 26px; display: block; background: #111; object-fit: cover; }
+  /* Toda la columna queda fija al hacer scroll: si solo se fija el teléfono, tapa los botones de abajo. */
+  .columna-reel { position: sticky; top: 12px; }
+  @media (max-width: 900px) { .columna-reel { position: static; } }
+  .telefono { background: #000; border-radius: 34px; padding: 10px; border: 1px solid var(--borde); }
+  /* El teléfono se ajusta al alto de la ventana para que los controles de abajo siempre se vean. */
+  .telefono { width: fit-content; max-width: 100%; margin: 0 auto; }
+  .telefono video, .telefono .vacio { height: min(calc(100vh - 190px), 560px); max-width: 100%; aspect-ratio: 9/16; border-radius: 26px; display: block; background: #111; object-fit: cover; }
   .telefono .vacio { display: grid; place-items: center; color: var(--suave); text-align: center; padding: 30px; }
   .looks { display: flex; gap: 8px; margin: 14px 0 10px; }
   .looks button { flex: 1; padding: 10px; border-radius: 12px; border: 1px solid var(--borde); background: var(--panel); color: var(--texto); font-weight: 600; cursor: pointer; }
@@ -197,7 +202,7 @@ async function proyecto(id) {
   clearInterval(sondeo);
   $('#app').innerHTML = `
     <div class="proyecto">
-      <div>
+      <div class="columna-reel">
         <div class="telefono" id="telefono"><div class="vacio">${t('esperaReel')}</div></div>
         <div class="looks" id="looks"></div>
         <div class="pedido"><input id="pedido" placeholder='${esc(t('pedido'))}'><button class="boton" id="pedir">${t('pedir')}</button></div>
@@ -211,7 +216,8 @@ async function proyecto(id) {
       </div>
     </div>`;
   $('#reintentar').onclick = async () => { await api(`/api/proyectos/${id}/reintentar`, { method: 'POST' }); sondeo = setInterval(actualizar, 2500); actualizar(); };
-  $('#pedir').onclick = async () => { const texto = $('#pedido').value.trim(); if (texto.length < 3) return; $('#pedido').value = ''; await api(`/api/proyectos/${id}/cambio`, { method: 'POST', body: JSON.stringify({ texto }) }); actualizar(); };
+  $('#pedido').onkeydown = ev => { if (ev.key === 'Enter') $('#pedir').click(); };
+  $('#pedir').onclick = async () => { const texto = $('#pedido').value.trim(); if (texto.length < 3) return; $('#pedido').value = ''; await api(`/api/proyectos/${id}/cambio`, { method: 'POST', body: JSON.stringify({ texto }) }); clearInterval(sondeo); sondeo = setInterval(actualizar, 2500); actualizar(); };
   let estado = null;
   async function actualizar() {
     estado = await api(`/api/proyectos/${id}`);
