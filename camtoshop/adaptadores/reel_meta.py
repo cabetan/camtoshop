@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import hashlib
 import json
 import subprocess
 import tempfile
@@ -211,7 +212,9 @@ class IlustradorMuse:
         carpeta.mkdir(parents=True, exist_ok=True)
 
     def _generar(self, nombre: str, prompt: str) -> Path:
-        destino = self._carpeta / nombre
+        # El nombre lleva una huella del prompt: si cambia el texto, se genera de nuevo.
+        huella = hashlib.sha1(prompt.encode()).hexdigest()[:8]
+        destino = self._carpeta / f"{Path(nombre).stem}_{huella}.png"
         if not destino.exists():
             self._cliente.editar_imagen(prompt, [self._foto], destino, "1024x1536")
         return destino
@@ -223,8 +226,7 @@ class IlustradorMuse:
             "Keep the product identical: shape, colors, logo and label text. No text."))
 
     def escena(self, prompt: str) -> Path:
-        nombre = "escena_" + "".join(c for c in prompt.lower() if c.isalnum())[:40] + ".png"
-        return self._generar(nombre, (
+        return self._generar("escena.png", (
             f"Vertical lifestyle photo: {prompt}. Use this exact product, keep it identical: shape, colors, "
             f"logo and label text. Natural, realistic, warm light, shallow depth of field. {self._estilo} No text."))
 

@@ -86,7 +86,7 @@ def main():
                              asdict, lambda d: Propuesta(**d)),
             ilustrador=IlustradorMuse(cliente, carpeta / "catalogo.png", carpeta / "insertos"),
             renderizador=RenderizadorFFmpeg(RAIZ / "videos" / "maestros", segmentar,
-                                            ["person", producto["conceptos_sam"][0]]),
+                                            ["person", producto["conceptos_sam"][0], "object held in hands"]),
         )
         t = time.time()
         r = editar_reel(video, idioma, producto, carpeta / f"reel_{look.nombre}.mp4", puertos, look)
