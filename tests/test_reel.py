@@ -1,7 +1,8 @@
 from pathlib import Path
 
-from camtoshop.dominio.direccion import Propuesta
-from camtoshop.dominio.editar_reel import Puertos, editar_reel
+from camtoshop.dominio.direccion import Propuesta, Revision
+from camtoshop.dominio.editar_reel import Puertos, editar_reel, preparar_montaje, dirigir_y_revisar, rehacer
+from camtoshop.dominio.direccion import LOOKS
 from camtoshop.dominio.reel import (
     Caja, Palabra, Tramo, a_linea_del_reel, al_original, armar_bloques, indices_conservados,
     palabras_del_reel, posicion_subtitulo, tramos_desde_palabras,
@@ -117,6 +118,23 @@ class DirectorFalso:
         return Propuesta("vela de madres", [(["hecha", "en Medellín"], 0, 3)], [("candle lit", 2)],
                          [1], ("Vela", "$85.000", "Cómprala"))
 
+    def ajustar(self, propuesta, pedido, palabras, producto, look, idioma):
+        return Propuesta("vela", [], [], [], propuesta.cierre), "premium"
+
+
+class RevisorExigente:
+    """Rechaza la primera versión y aprueba la segunda."""
+
+    def __init__(self):
+        self.vistas = 0
+
+    def revisar(self, reel, propuesta, palabras, look, idioma):
+        self.vistas += 1
+        if self.vistas == 1:
+            corregida = Propuesta("vela", propuesta.textos_detras, [], propuesta.enfasis, propuesta.cierre)
+            return Revision(False, ["la escena tapa el precio"], propuesta=corregida)
+        return Revision(True, [], "bien")
+
 
 class IlustradorFalso:
     def portada(self, texto):
@@ -140,3 +158,40 @@ def test_editar_reel_de_punta_a_punta_con_adaptadores_falsos():
     assert all(y + 150 <= 1100 for y in posiciones)  # nunca tapa el producto
     assert plan.textos_detras[0].lineas == ["HECHA", "EN MEDELLÍN"]
     assert plan.imagen_cierre == Path("cierre.png")
+
+
+def puertos_falsos(revisor=None):
+    return Puertos(TranscriptorFalso(), AlineadorFalso(), EditorFalso(), RastreadorFalso(),
+                   DirectorFalso(), IlustradorFalso(), RenderizadorFalso(), revisor)
+
+
+def test_el_revisor_corrige_y_se_vuelve_a_renderizar():
+    p = puertos_falsos(RevisorExigente())
+    m = preparar_montaje(Path("v.mov"), "es", p)
+    r = dirigir_y_revisar(m, {}, LOOKS["directo"], Path("reel.mp4"), p, rondas=3)
+    assert len(p.renderizador.llamadas) == 2
+    assert r.plan.escenas == [] and r.propuesta.texto_portada == "vela"
+    assert any("tapa el precio" in linea for linea in r.bitacora)
+    assert r.bitacora[-1].startswith("Revisión aprobada")
+
+
+def test_rehacer_aplica_el_pedido_y_cambia_de_look():
+    p = puertos_falsos()
+    m = preparar_montaje(Path("v.mov"), "es", p)
+    primero = dirigir_y_revisar(m, {}, LOOKS["directo"], Path("reel.mp4"), p)
+    nuevo = rehacer(m, primero, "más sobrio", {}, Path("reel2.mp4"), p)
+    assert nuevo.plan.look.nombre == "premium" and nuevo.plan.textos_detras == []
+    assert "más sobrio" in nuevo.bitacora[-1]
+
+
+class RevisorCaido:
+    def revisar(self, reel, propuesta, palabras, look, idioma):
+        raise RuntimeError("sin respuesta")
+
+
+def test_si_la_revision_falla_se_entrega_el_reel_renderizado():
+    p = puertos_falsos(RevisorCaido())
+    m = preparar_montaje(Path("v.mov"), "es", p)
+    r = dirigir_y_revisar(m, {}, LOOKS["directo"], Path("reel.mp4"), p)
+    assert r.reel == Path("reel.mp4") and len(p.renderizador.llamadas) == 1
+    assert "Revisión no disponible" in r.bitacora[-1]

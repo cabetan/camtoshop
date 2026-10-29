@@ -56,3 +56,9 @@ def test_zoom_alterno_centrado_hacia_el_producto_sin_salirse():
 
 def test_premium_no_hace_zoom():
     assert all(z == 1.0 for z, _, _ in centros_de_zoom([Tramo(0, 1), Tramo(1, 2)], {}, LOOKS["premium"]))
+
+
+def test_correcciones_solo_de_ortografia():
+    from camtoshop.dominio.direccion import correcciones_validas
+    ps = [Palabra("reciclabes", 0, 1), Palabra("vela", 1, 2), Palabra("bonita", 2, 3)]
+    assert correcciones_validas(ps, {0: "reciclables", 1: "lámpara", 2: "muy bonita", 9: "x"}) == {0: "reciclables"}

@@ -1,0 +1,312 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Camtoshop</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@700;900&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --fondo: #0d0e12; --panel: #16181f; --panel2: #1d2029; --borde: #2a2e3a; --texto: #f2f3f7;
+    --suave: #9aa0b2; --acento: #ffd23f; --acento2: #ff6b3d; --ok: #3ddc97; --error: #ff5d6c;
+    --radio: 16px;
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--fondo); color: var(--texto); font: 15px/1.5 Inter, system-ui, sans-serif; }
+  a { color: var(--acento); }
+  header { display: flex; align-items: center; justify-content: space-between; padding: 18px 28px; border-bottom: 1px solid var(--borde); }
+  .marca { font: 900 28px/1 "Barlow Condensed", sans-serif; letter-spacing: .5px; text-decoration: none; color: var(--texto); }
+  .marca span { color: var(--acento); }
+  .idioma button { background: none; border: 1px solid var(--borde); color: var(--suave); padding: 4px 10px; border-radius: 99px; cursor: pointer; }
+  .idioma button.activo { color: var(--fondo); background: var(--acento); border-color: var(--acento); }
+  main { max-width: 1240px; margin: 0 auto; padding: 32px 28px 80px; }
+  h1 { font: 900 clamp(44px, 7vw, 84px)/.95 "Barlow Condensed", sans-serif; margin: 10px 0 14px; text-transform: uppercase; }
+  h1 em { font-style: normal; color: var(--acento); }
+  h2 { font: 700 26px/1.1 "Barlow Condensed", sans-serif; text-transform: uppercase; letter-spacing: .4px; margin: 0 0 12px; }
+  .lema { color: var(--suave); font-size: 18px; max-width: 620px; }
+  .soltar { margin: 34px 0; border: 2px dashed var(--borde); border-radius: 24px; padding: 54px 24px; text-align: center; cursor: pointer; transition: .2s; background: var(--panel); }
+  .soltar:hover, .soltar.encima { border-color: var(--acento); background: #1b1a14; }
+  .soltar strong { display: block; font-size: 20px; margin-bottom: 6px; }
+  .soltar small { color: var(--suave); }
+  .modelos { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 18px; }
+  .chip { border: 1px solid var(--borde); border-radius: 99px; padding: 4px 12px; font-size: 13px; color: var(--suave); background: var(--panel); }
+  .lista { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 14px; }
+  .tarjeta { background: var(--panel); border: 1px solid var(--borde); border-radius: var(--radio); padding: 16px; cursor: pointer; text-decoration: none; color: inherit; display: block; }
+  .tarjeta:hover { border-color: var(--acento); }
+  .tarjeta .fase { font-size: 12px; text-transform: uppercase; letter-spacing: 1px; color: var(--suave); }
+  .proyecto { display: grid; grid-template-columns: 380px 1fr; gap: 28px; align-items: start; }
+  @media (max-width: 900px) { .proyecto { grid-template-columns: 1fr; } }
+  .telefono { background: #000; border-radius: 34px; padding: 10px; border: 1px solid var(--borde); position: sticky; top: 16px; }
+  .telefono video, .telefono .vacio { width: 100%; aspect-ratio: 9/16; border-radius: 26px; display: block; background: #111; object-fit: cover; }
+  .telefono .vacio { display: grid; place-items: center; color: var(--suave); text-align: center; padding: 30px; }
+  .looks { display: flex; gap: 8px; margin: 14px 0 10px; }
+  .looks button { flex: 1; padding: 10px; border-radius: 12px; border: 1px solid var(--borde); background: var(--panel); color: var(--texto); font-weight: 600; cursor: pointer; }
+  .looks button.activo { border-color: var(--acento); color: var(--acento); }
+  .looks button:disabled { opacity: .5; cursor: wait; }
+  .pedido { display: flex; gap: 8px; }
+  input, textarea, select { width: 100%; background: var(--panel2); color: var(--texto); border: 1px solid var(--borde); border-radius: 10px; padding: 10px 12px; font: inherit; }
+  textarea { min-height: 120px; resize: vertical; }
+  .boton { background: var(--acento); color: #111; border: 0; border-radius: 12px; padding: 10px 18px; font-weight: 700; cursor: pointer; white-space: nowrap; }
+  .boton:disabled { opacity: .5; cursor: not-allowed; }
+  .boton.secundario { background: var(--panel2); color: var(--texto); border: 1px solid var(--borde); }
+  .progreso { height: 8px; background: var(--panel2); border-radius: 99px; overflow: hidden; margin: 10px 0 18px; }
+  .progreso div { height: 100%; background: linear-gradient(90deg, var(--acento), var(--acento2)); transition: width .6s; }
+  .bitacora { background: var(--panel); border: 1px solid var(--borde); border-radius: var(--radio); padding: 14px 16px; max-height: 300px; overflow: auto; font-size: 14px; }
+  .bitacora li { list-style: none; padding: 5px 0; border-bottom: 1px solid #22252f; display: flex; gap: 10px; }
+  .bitacora li:last-child { border: 0; }
+  .bitacora .t { color: var(--suave); font-variant-numeric: tabular-nums; min-width: 48px; }
+  .bitacora ul { padding: 0; margin: 0; }
+  .pestanas { display: flex; gap: 6px; border-bottom: 1px solid var(--borde); margin-bottom: 18px; overflow-x: auto; }
+  .pestanas button { background: none; border: 0; color: var(--suave); padding: 10px 14px; font-weight: 600; cursor: pointer; border-bottom: 2px solid transparent; }
+  .pestanas button.activo { color: var(--texto); border-color: var(--acento); }
+  .seccion { background: var(--panel); border: 1px solid var(--borde); border-radius: var(--radio); padding: 20px; margin-bottom: 18px; }
+  .campo { margin-bottom: 14px; }
+  .campo label { display: block; font-size: 13px; color: var(--suave); margin-bottom: 6px; }
+  .fila { display: grid; grid-template-columns: 1fr 120px; gap: 10px; }
+  .galeria { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 12px; }
+  .galeria figure { margin: 0; background: var(--panel2); border-radius: 12px; overflow: hidden; border: 1px solid var(--borde); }
+  .galeria img { width: 100%; display: block; aspect-ratio: 1; object-fit: cover; }
+  .galeria figcaption { padding: 10px 12px; font-size: 13px; color: var(--suave); }
+  .galeria figcaption b { color: var(--texto); display: block; font-size: 14px; }
+  .canal { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 14px 0; border-bottom: 1px solid var(--borde); }
+  .canal:last-of-type { border: 0; }
+  .canal small { color: var(--suave); display: block; }
+  .punto { width: 9px; height: 9px; border-radius: 50%; display: inline-block; margin-right: 6px; background: var(--error); }
+  .punto.ok { background: var(--ok); }
+  .resultado { padding: 10px 12px; border-radius: 10px; margin-top: 8px; background: var(--panel2); font-size: 14px; }
+  .resultado.ok { border-left: 3px solid var(--ok); } .resultado.mal { border-left: 3px solid var(--error); }
+  .aviso { background: #2b2412; color: #ffe6a0; border-radius: 10px; padding: 10px 12px; margin-bottom: 12px; font-size: 14px; }
+  pre.pie { white-space: pre-wrap; background: var(--panel2); border-radius: 10px; padding: 12px; font: 13px/1.5 Inter, sans-serif; color: #d9dbe4; }
+  .error { color: var(--error); }
+  .oculto { display: none !important; }
+</style>
+</head>
+<body>
+<header>
+  <a class="marca" href="#">CAMTO<span>SHOP</span></a>
+  <div class="idioma"><button data-l="en">EN</button> <button data-l="es">ES</button></div>
+</header>
+<main id="app"></main>
+
+<script>
+const T = {
+  en: {
+    titulo: 'Film it. <em>Sell it.</em>', lema: 'Talk about your product on your phone. Camtoshop edits the Reel, shoots the catalog photos, writes the listing and the ads, and publishes to your store, Instagram and Facebook.',
+    soltar: 'Drop your product video here', soltar2: 'or click to choose a .mov / .mp4 from your phone',
+    subiendo: 'Uploading…', recientes: 'Recent products', procesando: 'Working on it', listo: 'Ready', error: 'Error', en_cola: 'Queued',
+    agente: 'What the agent is doing', reel: 'Reel', looks: { directo: 'Direct', anuncio: 'Ad', premium: 'Premium' },
+    pedido: 'Ask for a change, e.g. "make it calmer"', pedir: 'Redo', ficha: 'Listing', fotos: 'Photos', anuncios: 'Ads', publicar: 'Publish',
+    tituloCampo: 'Title', descripcion: 'Description', puntos: 'Key points (one per line)', precio: 'Price', moneda: 'Currency', guardar: 'Save', guardado: 'Saved',
+    catalogo: 'Studio catalog photo', ambiente: 'Editorial photo', canales: 'Channels',
+    shopify: 'Shopify store', shopifyD: 'Product page with photos and the Reel',
+    catalogo_meta: 'Meta catalog', catalogo_metaD: 'Instagram & Facebook Shops, WhatsApp catalog',
+    instagram: 'Instagram Reel', instagramD: 'Published with caption and hashtags',
+    conectado: 'Connected', noConectado: 'Not connected', pie: 'Instagram caption', publicarBoton: 'Publish selected',
+    confirmar: 'This will publish publicly on the selected channels. Continue?', esperaReel: 'Your Reel will appear here', min: 'min', reintentar: 'Retry'
+  },
+  es: {
+    titulo: 'Grábalo. <em>Véndelo.</em>', lema: 'Habla de tu producto con el celular. Camtoshop edita el Reel, hace las fotos de catálogo, escribe la ficha y los anuncios, y publica en tu tienda, Instagram y Facebook.',
+    soltar: 'Suelta aquí el video de tu producto', soltar2: 'o haz clic para elegir un .mov / .mp4 de tu celular',
+    subiendo: 'Subiendo…', recientes: 'Productos recientes', procesando: 'Trabajando', listo: 'Listo', error: 'Error', en_cola: 'En cola',
+    agente: 'Lo que está haciendo el agente', reel: 'Reel', looks: { directo: 'Directo', anuncio: 'Anuncio', premium: 'Premium' },
+    pedido: 'Pide un cambio, p. ej. "hazlo más sobrio"', pedir: 'Rehacer', ficha: 'Ficha', fotos: 'Fotos', anuncios: 'Anuncios', publicar: 'Publicar',
+    tituloCampo: 'Título', descripcion: 'Descripción', puntos: 'Puntos clave (uno por línea)', precio: 'Precio', moneda: 'Moneda', guardar: 'Guardar', guardado: 'Guardado',
+    catalogo: 'Foto de catálogo de estudio', ambiente: 'Foto editorial', canales: 'Canales',
+    shopify: 'Tienda Shopify', shopifyD: 'Página del producto con fotos y el Reel',
+    catalogo_meta: 'Catálogo de Meta', catalogo_metaD: 'Tiendas de Instagram y Facebook, catálogo de WhatsApp',
+    instagram: 'Reel de Instagram', instagramD: 'Publicado con texto y etiquetas',
+    conectado: 'Conectado', noConectado: 'Sin conectar', pie: 'Texto para Instagram', publicarBoton: 'Publicar seleccionados',
+    confirmar: 'Esto publica en los canales seleccionados, a la vista de todos. ¿Seguir?', esperaReel: 'Aquí aparecerá tu Reel', min: 'min', reintentar: 'Reintentar'
+  }
+};
+let L = localStorage.getItem('idioma') || 'en';
+// La bitácora del agente se escribe en español; en inglés se traduce con estas reglas.
+const BITACORA_EN = [
+  [/^Preparando el video en 1080p$/, 'Preparing the video in 1080p'],
+  [/^Muse Spark mira y escucha el video$/, 'Muse Spark watches and listens to the video'],
+  [/^Producto: (.*)$/, 'Product: $1'],
+  [/^SAM 3\.1 recorta el producto y Muse Image hace las fotos de catálogo$/, 'SAM 3.1 cuts out the product and Muse Image shoots the catalog photos'],
+  [/^Fotos de catálogo listas$/, 'Catalog photos ready'],
+  [/^Transcribiendo con Muse Voice Transcribe$/, 'Transcribing with Muse Voice Transcribe'],
+  [/^Alineando cada palabra con XLSR-53$/, 'Aligning every word with XLSR-53'],
+  [/^Muse Spark elige las tomas buenas$/, 'Muse Spark picks the good takes'],
+  [/^SAM 3\.1 sigue el producto cuadro a cuadro$/, 'SAM 3.1 tracks the product frame by frame'],
+  [/^Edición: (\d+) palabras fuera, (\d+) s de mensaje limpio$/, 'Edit: $1 words cut, $2 s of clean message'],
+  [/^Muse Spark escribe la ficha del producto en inglés y español$/, 'Muse Spark writes the product listing in English and Spanish'],
+  [/^Muse Spark dirige el Reel \(look (.*)\)$/, 'Muse Spark directs the Reel ($1 look)'],
+  [/^Renderizando \(versión (\d+)\)$/, 'Rendering (version $1)'],
+  [/^Muse Spark revisa el Reel terminado$/, 'Muse Spark reviews the finished Reel'],
+  [/^Revisión aprobada(.*)$/, 'Review approved$1'],
+  [/^Corrige: (.*)$/, 'Fixing: $1'],
+  [/^Muse Spark escribe 3 anuncios y Muse Image diseña cada pieza$/, 'Muse Spark writes 3 ads and Muse Image designs each one'],
+  [/^Listo para publicar$/, 'Ready to publish'],
+  [/^Muse Spark interpreta el pedido: (.*)$/, 'Muse Spark interprets the request: $1'],
+  [/^Renderizando con el look (.*)$/, 'Rendering with the $1 look'],
+  [/^Subtítulos corregidos: (.*)$/, 'Captions fixed: $1'],
+  [/^Revisión no disponible, se entrega la versión (\d+)(.*)$/, 'Review unavailable, delivering version $1$2'],
+  [/^Pedido: (.*) → look (.*)$/, 'Request: $1 → $2 look'],
+];
+const bitacora = s => L === 'es' ? s : (BITACORA_EN.find(([r]) => r.test(s)) ? s.replace(...BITACORA_EN.find(([r]) => r.test(s))) : s);
+const t = k => T[L][k];
+const $ = (s, r = document) => r.querySelector(s);
+const esc = s => String(s ?? '').replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+let sondeo = null, pestana = 'ficha', idiomaFicha = null, ultimoReel = '';
+
+document.querySelectorAll('.idioma button').forEach(b => b.onclick = () => { L = b.dataset.l; localStorage.setItem('idioma', L); pintarIdioma(); ruta(); });
+function pintarIdioma() { document.querySelectorAll('.idioma button').forEach(b => b.classList.toggle('activo', b.dataset.l === L)); document.documentElement.lang = L; }
+
+async function api(url, opciones = {}) {
+  const r = await fetch(url, { headers: opciones.body && !(opciones.body instanceof FormData) ? { 'Content-Type': 'application/json' } : {}, ...opciones });
+  if (!r.ok) throw new Error((await r.json().catch(() => ({}))).detail || r.statusText);
+  return r.json();
+}
+
+// --- Inicio -------------------------------------------------------------
+async function inicio() {
+  clearInterval(sondeo);
+  $('#app').innerHTML = `
+    <h1>${t('titulo')}</h1><p class="lema">${t('lema')}</p>
+    <label class="soltar" id="soltar"><input type="file" accept="video/*" hidden id="archivo">
+      <strong>${t('soltar')}</strong><small>${t('soltar2')}</small><div id="subida"></div></label>
+    <div class="modelos">${['Muse Spark', 'Muse Voice Transcribe', 'SAM 3.1', 'Muse Image', 'wav2vec2 XLSR-53'].map(m => `<span class="chip">${m}</span>`).join('')}</div>
+    <h2 style="margin-top:40px">${t('recientes')}</h2><div class="lista" id="lista"></div>`;
+  const zona = $('#soltar');
+  zona.ondragover = e => { e.preventDefault(); zona.classList.add('encima'); };
+  zona.ondragleave = () => zona.classList.remove('encima');
+  zona.ondrop = e => { e.preventDefault(); zona.classList.remove('encima'); subir(e.dataTransfer.files[0]); };
+  $('#archivo').onchange = e => subir(e.target.files[0]);
+  const proyectos = await api('/api/proyectos');
+  $('#lista').innerHTML = proyectos.map(p => `
+    <a class="tarjeta" href="#/p/${p.id}"><div class="fase">${t(p.fase) || p.fase} · ${p.progreso}%</div>
+    <strong>${esc(p.analisis?.nombre || p.nombre_archivo)}</strong><div style="color:var(--suave);font-size:13px">${new Date(p.creado * 1000).toLocaleString(L)}</div></a>`).join('');
+}
+
+function subir(archivo) {
+  if (!archivo) return;
+  const datos = new FormData(); datos.append('video', archivo);
+  const x = new XMLHttpRequest();
+  x.open('POST', '/api/proyectos');
+  x.upload.onprogress = e => $('#subida').innerHTML = `<div class="progreso"><div style="width:${(e.loaded / e.total * 100).toFixed(0)}%"></div></div>${t('subiendo')}`;
+  x.onload = () => { if (x.status < 300) location.hash = '#/p/' + JSON.parse(x.responseText).id; else $('#subida').innerHTML = `<p class="error">${esc(x.responseText)}</p>`; };
+  x.send(datos);
+}
+
+// --- Proyecto -----------------------------------------------------------
+async function proyecto(id) {
+  clearInterval(sondeo);
+  $('#app').innerHTML = `
+    <div class="proyecto">
+      <div>
+        <div class="telefono" id="telefono"><div class="vacio">${t('esperaReel')}</div></div>
+        <div class="looks" id="looks"></div>
+        <div class="pedido"><input id="pedido" placeholder='${esc(t('pedido'))}'><button class="boton" id="pedir">${t('pedir')}</button></div>
+      </div>
+      <div>
+        <h2 id="nombre">…</h2>
+        <div class="progreso" id="barra"><div style="width:0"></div></div>
+        <div class="seccion"><h2 style="font-size:18px">${t('agente')}</h2><div class="bitacora"><ul id="pasos"></ul></div><p class="error" id="error"></p><button class="boton secundario oculto" id="reintentar">${t('reintentar')}</button></div>
+        <div class="pestanas" id="pestanas"></div>
+        <div id="contenido"></div>
+      </div>
+    </div>`;
+  $('#reintentar').onclick = async () => { await api(`/api/proyectos/${id}/reintentar`, { method: 'POST' }); sondeo = setInterval(actualizar, 2500); actualizar(); };
+  $('#pedir').onclick = async () => { const texto = $('#pedido').value.trim(); if (texto.length < 3) return; $('#pedido').value = ''; await api(`/api/proyectos/${id}/cambio`, { method: 'POST', body: JSON.stringify({ texto }) }); actualizar(); };
+  let estado = null;
+  async function actualizar() {
+    estado = await api(`/api/proyectos/${id}`);
+    pintar(estado);
+    if (estado.fase === 'listo' || estado.fase === 'error') clearInterval(sondeo);
+  }
+  function pintar(e) {
+    $('#nombre').textContent = e.analisis ? `${e.analisis.nombre}${e.analisis.marca ? ' · ' + e.analisis.marca : ''}` : (e.nombre_archivo || '');
+    $('#barra div').style.width = e.progreso + '%';
+    $('#barra').classList.toggle('oculto', e.fase === 'listo');
+    $('#pasos').innerHTML = e.pasos.map(p => `<li><span class="t">${Math.floor(p.t / 60)}:${String(Math.floor(p.t % 60)).padStart(2, '0')}</span><span>${esc(bitacora(p.texto))}</span></li>`).join('');
+    $('#pasos').parentElement.scrollTop = 1e6;
+    $('#error').textContent = e.error || '';
+    $('#reintentar').classList.toggle('oculto', e.fase !== 'error');
+    const reel = e.reels?.[e.look];
+    if (reel && reel.archivo !== ultimoReel) {
+      ultimoReel = reel.archivo;
+      $('#telefono').innerHTML = `<video src="/api/proyectos/${id}/archivos/${reel.archivo}?v=${Date.now()}" controls playsinline loop></video>`;
+    }
+    const ocupado = e.fase === 'procesando' || e.fase === 'en_cola';
+    $('#looks').innerHTML = Object.keys(T[L].looks).map(k => `<button data-look="${k}" class="${k === e.look ? 'activo' : ''}" ${ocupado ? 'disabled' : ''}>${T[L].looks[k]}</button>`).join('');
+    document.querySelectorAll('#looks button').forEach(b => b.onclick = async () => {
+      await api(`/api/proyectos/${id}/look`, { method: 'POST', body: JSON.stringify({ look: b.dataset.look }) });
+      sondeo = setInterval(actualizar, 2500); actualizar();
+    });
+    $('#pedir').disabled = ocupado || !reel;
+    const tabs = ['ficha', 'fotos', 'anuncios', 'publicar'];
+    $('#pestanas').innerHTML = tabs.map(k => `<button data-p="${k}" class="${k === pestana ? 'activo' : ''}">${t(k)}</button>`).join('');
+    document.querySelectorAll('#pestanas button').forEach(b => b.onclick = () => { pestana = b.dataset.p; pintar(estado); });
+    if (!document.activeElement || !$('#contenido').contains(document.activeElement)) contenido(e, id);
+  }
+  sondeo = setInterval(actualizar, 2500);
+  actualizar();
+}
+
+function archivo(id, ruta) { return `/api/proyectos/${id}/archivos/${ruta}`; }
+
+function contenido(e, id) {
+  const c = $('#contenido');
+  if (pestana === 'ficha') {
+    if (!e.ficha) { c.innerHTML = ''; return; }
+    const idiomas = Object.keys(e.ficha.textos);
+    idiomaFicha = idiomas.includes(idiomaFicha) ? idiomaFicha : idiomas[0];
+    const tx = e.ficha.textos[idiomaFicha];
+    c.innerHTML = `${(e.avisos || []).map(a => `<div class="aviso">${esc(a)}</div>`).join('')}
+      <div class="seccion">
+        <div class="looks" style="margin-top:0">${idiomas.map(i => `<button data-i="${i}" class="${i === idiomaFicha ? 'activo' : ''}">${i.toUpperCase()}</button>`).join('')}</div>
+        <div class="campo"><label>${t('tituloCampo')}</label><input id="f_titulo" value="${esc(tx.titulo)}"></div>
+        <div class="campo"><label>${t('descripcion')}</label><textarea id="f_desc">${esc(tx.descripcion)}</textarea></div>
+        <div class="campo"><label>${t('puntos')}</label><textarea id="f_puntos" style="min-height:90px">${esc(tx.puntos.join('\n'))}</textarea></div>
+        <div class="fila campo"><div><label>${t('precio')}</label><input id="f_precio" type="number" step="any" value="${e.ficha.precio?.monto ?? ''}"></div>
+          <div><label>${t('moneda')}</label><input id="f_moneda" maxlength="3" value="${esc(e.ficha.precio?.moneda ?? 'USD')}"></div></div>
+        <button class="boton" id="f_guardar">${t('guardar')}</button> <span id="f_ok" style="color:var(--ok)"></span>
+      </div>`;
+    c.querySelectorAll('[data-i]').forEach(b => b.onclick = () => { idiomaFicha = b.dataset.i; contenido(e, id); });
+    $('#f_guardar').onclick = async () => {
+      const cambios = { idioma: idiomaFicha, titulo: $('#f_titulo').value, descripcion: $('#f_desc').value, puntos: $('#f_puntos').value.split('\n').filter(Boolean) };
+      if ($('#f_precio').value) { cambios.precio = parseFloat($('#f_precio').value); cambios.moneda = $('#f_moneda').value; }
+      e.ficha = await api(`/api/proyectos/${id}/ficha`, { method: 'PATCH', body: JSON.stringify(cambios) });
+      $('#f_ok').textContent = t('guardado');
+    };
+  } else if (pestana === 'fotos') {
+    const nombres = [t('catalogo'), t('ambiente')];
+    c.innerHTML = `<div class="galeria">${(e.fotos || []).map((f, i) => `<figure><a href="${archivo(id, f)}" target="_blank"><img src="${archivo(id, f)}"></a><figcaption><b>${nombres[i] || ''}</b>Muse Image + SAM 3.1</figcaption></figure>`).join('')}</div>`;
+  } else if (pestana === 'anuncios') {
+    c.innerHTML = `<div class="galeria">${(e.anuncios || []).map(a => `<figure><a href="${archivo(id, a.imagenes.feed)}" target="_blank"><img src="${archivo(id, a.imagenes.feed)}"></a>
+      <figcaption><b>${esc(a.titular)}</b>${esc(a.texto)}<br><span class="chip" style="margin-top:8px;display:inline-block">${esc(a.llamado)}</span> <span style="font-size:12px">· ${esc(a.angulo)}</span></figcaption></figure>`).join('')}</div>`;
+  } else if (pestana === 'publicar') {
+    const canales = ['shopify', 'catalogo_meta', 'instagram'];
+    const ultimo = (e.publicaciones || []).slice(-1)[0];
+    c.innerHTML = `<div class="seccion"><h2 style="font-size:18px">${t('canales')}</h2>
+      ${canales.map(k => `<div class="canal"><div><strong>${t(k)}</strong><small>${t(k + 'D')}</small>
+        <small><span class="punto ${e.canales[k] ? 'ok' : ''}"></span>${e.canales[k] ? t('conectado') : t('noConectado')}</small></div>
+        <input type="checkbox" style="width:auto" data-c="${k}" ${e.canales[k] ? 'checked' : 'disabled'}></div>`).join('')}
+      <button class="boton" id="publicar" ${e.fase !== 'listo' ? 'disabled' : ''}>${t('publicarBoton')}</button>
+      <div id="resultados">${ultimo ? ultimo.resultados.map(r => `<div class="resultado ${r.ok ? 'ok' : 'mal'}"><b>${t(r.canal)}</b> · ${r.ok ? `<a href="${esc(r.url)}" target="_blank">${esc(r.url)}</a>` : esc(r.detalle)}</div>`).join('') : ''}</div></div>
+      <div class="seccion"><h2 style="font-size:18px">${t('pie')}</h2><pre class="pie">${esc(e.pie)}</pre></div>`;
+    $('#publicar').onclick = async () => {
+      const elegidos = [...c.querySelectorAll('[data-c]:checked')].map(x => x.dataset.c);
+      if (!elegidos.length || !confirm(t('confirmar'))) return;
+      $('#publicar').disabled = true;
+      const r = await api(`/api/proyectos/${id}/publicar`, { method: 'POST', body: JSON.stringify({ canales: elegidos }) }).catch(err => [{ canal: 'error', ok: false, detalle: err.message }]);
+      $('#resultados').innerHTML = r.map(x => `<div class="resultado ${x.ok ? 'ok' : 'mal'}"><b>${t(x.canal) || x.canal}</b> · ${x.ok ? `<a href="${esc(x.url)}" target="_blank">${esc(x.url)}</a>` : esc(x.detalle)}</div>`).join('');
+      $('#publicar').disabled = false;
+    };
+  }
+}
+
+function ruta() {
+  const m = location.hash.match(/^#\/p\/(.+)$/);
+  ultimoReel = '';
+  m ? proyecto(m[1]) : inicio();
+}
+window.onhashchange = ruta;
+pintarIdioma(); ruta();
+</script>
+</body>
+</html>

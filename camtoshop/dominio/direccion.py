@@ -9,6 +9,7 @@ escenas de 2 s como máximo y nada antes del primer segundo y medio salvo la por
 from __future__ import annotations
 
 from dataclasses import dataclass, field
+from difflib import SequenceMatcher
 from pathlib import Path
 
 from camtoshop.dominio.reel import Caja, Palabra, Tramo
@@ -142,3 +143,29 @@ def centros_de_zoom(tramos: list[Tramo], cajas: dict[float, Caja], look: Look,
         cy = min(max(cy, medio_alto), alto - medio_alto)
         salida.append((zoom, cx, cy))
     return salida
+
+
+@dataclass
+class Revision:
+    """Lo que el revisor concluye tras mirar el Reel terminado."""
+    aprobado: bool
+    problemas: list[str]
+    comentario: str = ""
+    propuesta: Propuesta | None = None
+    correcciones: dict[int, str] = field(default_factory=dict)  # índice de palabra -> texto corregido
+
+
+def correcciones_validas(palabras: list[Palabra], correcciones: dict[int, str], parecido: float = 0.6) -> dict[int, str]:
+    """Solo se aceptan arreglos de ortografía o de transcripción, nunca frases reescritas.
+
+    La palabra corregida tiene que parecerse a la original (o ser la misma cifra escrita en números).
+    """
+    validas = {}
+    for i, texto in correcciones.items():
+        if not (0 <= i < len(palabras)) or not texto.strip() or " " in texto.strip():
+            continue
+        original = palabras[i].texto
+        cercana = SequenceMatcher(None, original.lower(), texto.lower()).ratio() >= parecido
+        if cercana and texto != original:
+            validas[i] = texto.strip()
+    return validas

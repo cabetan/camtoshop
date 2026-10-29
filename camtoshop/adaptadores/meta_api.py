@@ -80,6 +80,10 @@ class ClienteMeta:
             for item in datos.get("output", []) if item.get("type") == "message"
             for c in item.get("content", []) if c.get("type") == "output_text"
         ]
+        if not "".join(textos).strip():
+            # Pasa cuando el razonamiento agota max_output_tokens antes de responder.
+            raise RuntimeError(f"Muse {modelo} no devolvió texto (estado {datos.get('status')}, "
+                               f"{datos.get('incomplete_details')}, uso {datos.get('usage')})")
         return "".join(textos)
 
     @staticmethod
