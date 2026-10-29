@@ -21,6 +21,7 @@ LIMITE_ETIQUETAS = 30
 class EnTienda:
     url_producto: str
     urls_imagenes: list[str] = field(default_factory=list)
+    url_revision: str = ""  # en modo borrador: dónde lo revisa el comerciante antes de publicarlo
 
 
 @dataclass
@@ -78,7 +79,9 @@ def publicar(ficha: Ficha, reel: Path | None, portada: Path | None, canales: lis
             if ficha.precio is None:
                 raise ValueError("La ficha no tiene precio.")
             en_tienda = tienda.publicar_producto(ficha, reel)
-            resultados.append(Resultado("shopify", True, en_tienda.url_producto))
+            resultados.append(Resultado("shopify", True, en_tienda.url_revision or en_tienda.url_producto,
+                                        "Borrador: revísalo en Shopify y publícalo cuando quieras."
+                                        if en_tienda.url_revision else ""))
         except Exception as e:  # cada canal informa su error sin detener a los demás
             resultados.append(Resultado("shopify", False, detalle=str(e)))
 

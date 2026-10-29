@@ -98,3 +98,14 @@ def test_publicar_sin_precio_no_toca_las_tiendas():
 def test_canal_no_conectado_da_un_mensaje_claro():
     [r] = publicar(ficha(), Path("reel.mp4"), None, ["shopify"], None, None, None)
     assert not r.ok and "SHOPIFY_TOKEN" in r.detalle
+
+
+class TiendaEnBorrador:
+    def publicar_producto(self, ficha, video):
+        return EnTienda("https://tienda.test/products/vela", ["https://cdn.test/vela.png"],
+                        "https://tienda.test/admin/products/1")
+
+
+def test_en_borrador_se_muestra_el_enlace_para_revisar():
+    [r] = publicar(ficha(), Path("reel.mp4"), None, ["shopify"], TiendaEnBorrador(), None, None)
+    assert r.ok and r.url.endswith("/admin/products/1") and "Borrador" in r.detalle

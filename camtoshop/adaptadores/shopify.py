@@ -3,6 +3,9 @@
 Crea el producto con su precio, sube las fotos y el Reel con staged uploads y lo publica en la
 tienda en línea. Requiere una app personalizada con los permisos write_products, write_files y
 write_publications (SHOPIFY_TIENDA = mitienda.myshopify.com, SHOPIFY_TOKEN = shpat_…).
+
+Por defecto crea el producto como borrador: no aparece en la tienda hasta que el comerciante
+lo revise y lo publique. Así se puede usar con la tienda real de un cliente sin riesgo.
 """
 
 from __future__ import annotations
@@ -21,7 +24,9 @@ VERSION = "2025-10"
 
 
 class TiendaShopify:
-    def __init__(self, tienda: str, token: str, version: str = VERSION):
+    def __init__(self, tienda: str, token: str, version: str = VERSION, borrador: bool = True):
+        self._tienda = tienda
+        self._borrador = borrador
         self._url = f"https://{tienda}/admin/api/{version}/graphql.json"
         self._sesion = requests.Session()
         self._sesion.headers.update({"X-Shopify-Access-Token": token, "Content-Type": "application/json"})
@@ -89,7 +94,7 @@ class TiendaShopify:
                 "vendor": ficha.marca or "Camtoshop",
                 "productType": ficha.categoria,
                 "tags": ficha.etiquetas,
-                "status": "ACTIVE",
+                "status": "DRAFT" if self._borrador else "ACTIVE",
                 "seo": {"title": t.seo_titulo, "description": t.seo_descripcion},
                 "productOptions": [{"name": "Title", "values": [{"name": "Default Title"}]}],
                 "variants": [{"optionValues": [{"optionName": "Title", "name": "Default Title"}],
@@ -106,8 +111,12 @@ class TiendaShopify:
             if r["productCreateMedia"]["mediaUserErrors"]:
                 raise RuntimeError("Shopify (medios): " + "; ".join(
                     e["message"] for e in r["productCreateMedia"]["mediaUserErrors"]))
+        imagenes = self._urls_imagenes(producto["id"])
+        if self._borrador:
+            numero = producto["id"].rsplit("/", 1)[-1]
+            return EnTienda(self._url_publica(producto), imagenes, f"https://{self._tienda}/admin/products/{numero}")
         self._publicar_en_tienda_online(producto["id"])
-        return EnTienda(self._url_publica(producto), self._urls_imagenes(producto["id"]))
+        return EnTienda(self._url_publica(producto), imagenes)
 
     def _publicar_en_tienda_online(self, producto_id: str):
         canales = self._gql("{ publications(first: 20) { nodes { id name } } }")["publications"]["nodes"]

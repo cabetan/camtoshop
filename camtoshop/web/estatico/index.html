@@ -293,14 +293,14 @@ function contenido(e, id) {
         <small><span class="punto ${e.canales[k] ? 'ok' : ''}"></span>${e.canales[k] ? t('conectado') : t('noConectado')}</small></div>
         <input type="checkbox" style="width:auto" data-c="${k}" ${e.canales[k] ? 'checked' : 'disabled'}></div>`).join('')}
       <button class="boton" id="publicar" ${e.fase !== 'listo' ? 'disabled' : ''}>${t('publicarBoton')}</button>
-      <div id="resultados">${ultimo ? ultimo.resultados.map(r => `<div class="resultado ${r.ok ? 'ok' : 'mal'}"><b>${t(r.canal)}</b> · ${r.ok ? `<a href="${esc(r.url)}" target="_blank">${esc(r.url)}</a>` : esc(r.detalle)}</div>`).join('') : ''}</div></div>
+      <div id="resultados">${ultimo ? ultimo.resultados.map(r => `<div class="resultado ${r.ok ? 'ok' : 'mal'}"><b>${t(r.canal)}</b> · ${r.ok ? `<a href="${esc(r.url)}" target="_blank">${esc(r.url)}</a>${r.detalle ? '<br>' + esc(r.detalle) : ''}` : esc(r.detalle)}</div>`).join('') : ''}</div></div>
       <div class="seccion"><h2 style="font-size:18px">${t('pie')}</h2><pre class="pie">${esc(e.pie)}</pre></div>`;
     $('#publicar').onclick = async () => {
       const elegidos = [...c.querySelectorAll('[data-c]:checked')].map(x => x.dataset.c);
       if (!elegidos.length || !confirm(t('confirmar'))) return;
       $('#publicar').disabled = true;
       const r = await api(`/api/proyectos/${id}/publicar`, { method: 'POST', body: JSON.stringify({ canales: elegidos }) }).catch(err => [{ canal: 'error', ok: false, detalle: err.message }]);
-      $('#resultados').innerHTML = r.map(x => `<div class="resultado ${x.ok ? 'ok' : 'mal'}"><b>${t(x.canal) || x.canal}</b> · ${x.ok ? `<a href="${esc(x.url)}" target="_blank">${esc(x.url)}</a>` : esc(x.detalle)}</div>`).join('');
+      $('#resultados').innerHTML = r.map(x => `<div class="resultado ${x.ok ? 'ok' : 'mal'}"><b>${t(x.canal) || x.canal}</b> · ${x.ok ? `<a href="${esc(x.url)}" target="_blank">${esc(x.url)}</a>${x.detalle ? '<br>' + esc(x.detalle) : ''}` : esc(x.detalle)}</div>`).join('');
       $('#publicar').disabled = false;
     };
   }

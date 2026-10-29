@@ -31,7 +31,9 @@ def _revisar(r: requests.Response, que: str) -> dict:
 class CatalogoMeta:
     """Crea o actualiza el producto en un catálogo de Commerce Manager con items_batch."""
 
-    def __init__(self, catalogo_id: str, token: str, url_tienda: str = ""):
+    def __init__(self, catalogo_id: str, token: str, url_tienda: str = "", borrador: bool = True):
+        # En borrador el producto entra oculto ("staging"): no sale en tiendas ni en anuncios de catálogo.
+        self._borrador = borrador
         self._catalogo = catalogo_id
         self._token = token
         self._url_tienda = url_tienda.rstrip("/")
@@ -55,6 +57,7 @@ class CatalogoMeta:
             "image_link": imagenes[0],
             "additional_image_link": imagenes[1:10],
             "brand": ficha.marca or "Camtoshop",
+            "visibility": "staging" if self._borrador else "published",
             "google_product_category": ficha.categoria,
         }
         r = _revisar(requests.post(f"{GRAPH}/{self._catalogo}/items_batch", timeout=60, data={

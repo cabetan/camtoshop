@@ -68,7 +68,9 @@ Each channel turns on when its variables exist (environment or macOS Keychain):
 | Meta catalog | `META_CATALOGO_ID`, `META_TOKEN` (system user with `catalog_management`) |
 | Instagram | `IG_USUARIO_ID`, `META_TOKEN` (with `instagram_content_publish`) |
 
-Shopify publishes first, so the Meta catalog item can link to the live product page and its CDN images.
+Shopify publishes first, so the Meta catalog item can link to the product page and its CDN images.
+
+**Safe by default:** products are created as **drafts** in Shopify and as **hidden** (`staging`) items in the Meta catalog, so Camtoshop can be used on a real merchant's store without anything going live until they review it. Set `CAMTOSHOP_EN_VIVO=si` to publish directly.
 
 ## Credits
 

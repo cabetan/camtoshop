@@ -328,10 +328,13 @@ class Servicio:
     def publicar(self, pr: Proyecto, canales: list[str]) -> list[dict]:
         ficha = ficha_de_json(pr.estado["ficha"])
         reel = pr.ruta(pr.estado["reels"][pr.estado["look"]]["archivo"])
-        tienda = TiendaShopify(secreto("SHOPIFY_TIENDA"), secreto("SHOPIFY_TOKEN")) \
+        # Publicar en vivo es una decisión explícita: sin CAMTOSHOP_EN_VIVO=si todo queda en borrador.
+        borrador = (secreto("CAMTOSHOP_EN_VIVO") or "").lower() != "si"
+        tienda = TiendaShopify(secreto("SHOPIFY_TIENDA"), secreto("SHOPIFY_TOKEN"), borrador=borrador) \
             if canal_conectado("shopify") else None
         catalogo = CatalogoMeta(secreto("META_CATALOGO_ID"), secreto("META_TOKEN"),
-                                secreto("SHOPIFY_DOMINIO_PUBLICO") or "") if canal_conectado("catalogo_meta") else None
+                                secreto("SHOPIFY_DOMINIO_PUBLICO") or "", borrador=borrador) \
+            if canal_conectado("catalogo_meta") else None
         red = InstagramReels(secreto("IG_USUARIO_ID"), secreto("META_TOKEN")) \
             if canal_conectado("instagram") else None
         gancho = (pr.estado.get("analisis") or {}).get("gancho", "")
