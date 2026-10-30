@@ -109,3 +109,24 @@ class TiendaEnBorrador:
 def test_en_borrador_se_muestra_el_enlace_para_revisar():
     [r] = publicar(ficha(), Path("reel.mp4"), None, ["shopify"], TiendaEnBorrador(), None, None)
     assert r.ok and r.url.endswith("/admin/products/1") and "Borrador" in r.detalle
+
+
+from camtoshop.dominio.producto import ProductoDeTienda, elegir_para_reel, mensaje_desde_tienda, texto_plano
+from camtoshop.dominio.reel_fotos import precio_respaldado
+
+
+def test_mensaje_desde_tienda_respalda_el_precio():
+    p = ProductoDeTienda("vela", "Vela Estrella", texto_plano("<p>Hecha a mano&nbsp;con soya.</p>"),
+                         Precio(85000, "COP"), ("https://cdn/x.jpg",))
+    mensaje = mensaje_desde_tienda(p)
+    assert "Hecha a mano con soya." in mensaje and "<p>" not in mensaje
+    assert precio_respaldado(p.precio, mensaje)
+
+
+def test_elegir_para_reel_descarta_sin_foto_sin_precio_o_borrador():
+    ok = ProductoDeTienda("a", "A", "", Precio(10, "USD"), ("u",))
+    productos = [ok, ProductoDeTienda("b", "B", "", None, ("u",)), ProductoDeTienda("c", "C", "", Precio(1, "USD"), ()),
+                 ProductoDeTienda("d", "D", "", Precio(1, "USD"), ("u",), "DRAFT")] + [ok] * 10
+    elegidos = elegir_para_reel(productos)
+    assert len(elegidos) == 6 and all(p.handle == "a" for p in elegidos)
+    assert [p.handle for p in elegir_para_reel(productos[1:4], incluir_borradores=True)] == ["d"]

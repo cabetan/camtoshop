@@ -84,3 +84,30 @@ class Renderizador(Protocol):
     def render(self, video: Path, tramos: list[Tramo], bloques: list[Bloque],
                posiciones: list[float], plan: Plan, destino: Path) -> Path:
         """Corta, nivela el audio, aplica los efectos del plan y quema los subtítulos."""
+
+
+# --- Reel desde fotos ----------------------------------------------------------
+
+class Guionista(Protocol):
+    def guion(self, analisis: Analisis, texto: str, foto: Path, pedido: str = "",
+              anterior: "Guion | None" = None, problemas: list[str] | None = None) -> "Guion":
+        """Gancho, beneficios, llamado y escenas de uso para un Reel hecho solo con fotos."""
+
+
+class Escenografo(Protocol):
+    def escena(self, descripcion: str, recorte: Path) -> Path:
+        """El producto real (desde su recorte) en una escena de uso, en vertical."""
+
+
+class RenderizadorDeFotos(Protocol):
+    def render(self, tomas: list["Toma"], fotos: list[Path], recortes: list[Path | None], escenas: list[Path],
+               voz: Path | None, destino: Path, nombre: str = "") -> Path:
+        """Compone las tomas en un Reel vertical con la voz del comerciante si la hay."""
+
+
+class RevisorDeFotos(Protocol):
+    def revisar(self, reel: Path, guion: "Guion", precio: str) -> tuple[bool, list[str], str]:
+        """(aprobado, problemas, comentario) tras mirar el Reel terminado."""
+
+
+from camtoshop.dominio.reel_fotos import Guion, Toma  # noqa: E402  (solo para las anotaciones)

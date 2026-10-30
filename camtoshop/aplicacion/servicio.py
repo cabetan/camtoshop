@@ -7,8 +7,10 @@ Los pasos que no dependen entre sí corren en paralelo.
 
 from __future__ import annotations
 
+import io
 import json
 import shutil
+import subprocess
 import threading
 import time
 import traceback
@@ -17,9 +19,12 @@ from concurrent.futures import ThreadPoolExecutor
 from dataclasses import asdict
 from pathlib import Path
 
+import requests
+
 from camtoshop.adaptadores import cache
 from camtoshop.adaptadores.alineador_xlsr import AlineadorXLSR
 from camtoshop.adaptadores.config import canal_conectado, secreto
+from camtoshop.adaptadores.fotos_meta import AnalizadorFotosSpark, EscenografoMuse, GuionistaSpark, RevisorFotosSpark
 from camtoshop.adaptadores.meta_api import ClienteMeta
 from camtoshop.adaptadores.meta_comercio import CatalogoMeta, InstagramReels
 from camtoshop.adaptadores.producto_meta import AnalizadorSpark, FotografoMuse, PublicistaMuse, RedactorSpark
@@ -27,17 +32,24 @@ from camtoshop.adaptadores.reel_meta import (
     DirectorSpark, EditorSpark, IlustradorMuse, RastreadorSAM, RevisorSpark, TranscriptorMeta,
 )
 from camtoshop.adaptadores.render_ffmpeg import RenderizadorFFmpeg
+from camtoshop.adaptadores.render_fotos import RenderizadorFotos
 from camtoshop.adaptadores.sam_mascaras import mascaras
 from camtoshop.adaptadores.shopify import TiendaShopify, token_por_credenciales
 from camtoshop.dominio.anuncios import normalizar_anuncios
 from camtoshop.dominio.direccion import LOOK_POR_DEFECTO, LOOKS, Propuesta, armar_plan, centros_de_zoom
 from camtoshop.dominio.editar_reel import Montaje, Puertos, ResultadoReel, dirigir_y_revisar, preparar_montaje, rehacer
-from camtoshop.dominio.producto import Analisis, Ficha, Precio, Texto, normalizar_ficha, precio_valido
+from camtoshop.dominio.producto import (
+    Analisis, Ficha, Precio, ProductoDeTienda, Texto, apto_para_reel, elegir_para_reel, mensaje_desde_tienda,
+    normalizar_ficha, precio_valido,
+)
 from camtoshop.dominio.publicacion import pie_de_instagram, publicar
+from camtoshop.dominio.reel_fotos import Guion, PuertosFotos, precio_respaldado, reel_desde_fotos
 
 RAIZ = Path(__file__).resolve().parents[2]
 DATOS = RAIZ / "datos" / "proyectos"
 IDIOMAS_FICHA = ["en", "es"]  # inglés primero; siempre se agrega el idioma del video
+FORMATOS_FOTO = {".jpg", ".jpeg", ".png", ".webp", ".heic"}
+LOOK_FOTOS = "fotos"
 
 
 def ficha_a_json(f: Ficha) -> dict:
@@ -161,6 +173,56 @@ class Servicio:
         self._cola.submit(self._procesar, pr)
         return pr
 
+    def crear_desde_fotos(self, fotos: list[tuple[str, object]], texto: str,
+                          voz: tuple[str, object] | None = None, origen: str = "fotos") -> Proyecto:
+        """Proyecto sin video: fotos del producto, lo que escribió el comerciante y, si quiere, una nota de voz."""
+        identificador = time.strftime("%Y%m%d-%H%M%S-") + uuid.uuid4().hex[:6]
+        carpeta = self._datos / identificador
+        (carpeta / "material").mkdir(parents=True)
+        nombres = []
+        for n, (nombre, contenido) in enumerate(fotos):
+            destino = carpeta / "material" / f"foto_{n + 1}{Path(nombre).suffix.lower() or '.jpg'}"
+            with destino.open("wb") as f:
+                shutil.copyfileobj(contenido, f)
+            nombres.append(destino.name)
+        if voz:
+            with (carpeta / "material" / f"voz{Path(voz[0]).suffix.lower() or '.m4a'}").open("wb") as f:
+                shutil.copyfileobj(voz[1], f)
+        pr = Proyecto(carpeta)
+        pr.guardar(tipo="fotos", origen=origen, texto=texto, fotos_material=nombres, look=LOOK_FOTOS,
+                   nombre_archivo=f"{len(nombres)} foto" + ("s" if len(nombres) > 1 else ""))
+        self._cola.submit(self._procesar_fotos, pr)
+        return pr
+
+    # --- La tienda como origen ------------------------------------------------------
+
+    def _tienda(self, borrador: bool = True) -> TiendaShopify:
+        dominio = secreto("SHOPIFY_TIENDA")
+        token = secreto("SHOPIFY_TOKEN") or token_por_credenciales(
+            dominio, secreto("SHOPIFY_CLIENT_ID"), secreto("SHOPIFY_CLIENT_SECRET"))
+        return TiendaShopify(dominio, token, borrador=borrador)
+
+    def productos_de_tienda(self) -> list[dict]:
+        if not canal_conectado("shopify"):
+            raise RuntimeError("Shopify no está conectado.")
+        return [{**asdict(p), "precio_texto": p.precio.texto() if p.precio else "", "apto": apto_para_reel(p)}
+                for p in self._tienda().productos()]
+
+    def reels_desde_tienda(self, handles: list[str]) -> list[str]:
+        """Un proyecto por producto elegido (máximo 6). Cada Reel queda para aprobar, nada se publica solo."""
+        elegidos = [p for p in self._tienda().productos() if p.handle in set(handles)]
+        ids = []
+        for producto in elegir_para_reel(elegidos, incluir_borradores=True):
+            fotos = []
+            for n, url in enumerate(producto.imagenes[:6]):
+                r = requests.get(url, timeout=60)
+                r.raise_for_status()
+                fotos.append((f"tienda_{n + 1}.jpg", io.BytesIO(r.content)))
+            pr = self.crear_desde_fotos(fotos, mensaje_desde_tienda(producto), origen="shopify")
+            pr.guardar(handle_tienda=producto.handle, nombre_archivo=producto.titulo)
+            ids.append(pr.id)
+        return ids
+
     def obtener(self, identificador: str) -> Proyecto | None:
         carpeta = self._datos / identificador
         return Proyecto(carpeta) if (carpeta / "estado.json").exists() else None
@@ -220,7 +282,102 @@ class Servicio:
 
     def reintentar(self, pr: Proyecto):
         pr.guardar(fase="en_cola", error="", detalle_error="")
-        self._cola.submit(self._procesar, pr)
+        self._cola.submit(self._procesar_fotos if pr.estado.get("tipo") == "fotos" else self._procesar, pr)
+
+    # --- Reel desde fotos ---------------------------------------------------------
+
+    def _render_fotos(self, analisis: Analisis | None = None) -> RenderizadorFotos:
+        c = self.cliente
+        conceptos = (analisis.conceptos_sam if analisis else []) + ["product"]
+        return RenderizadorFotos(lambda concepto, img, fuente, salida: mascaras(c, concepto, img, fuente, salida),
+                                 conceptos)
+
+    def _puertos_fotos(self, pr: Proyecto, analisis: Analisis) -> PuertosFotos:
+        c = self.cliente
+        return PuertosFotos(GuionistaSpark(c), EscenografoMuse(c, pr.ruta("trabajo") / "escenas"),
+                            self._render_fotos(analisis), RevisorFotosSpark(c))
+
+    def _voz(self, pr: Proyecto) -> Path | None:
+        return next(pr.ruta("material").glob("voz.*"), None)
+
+    def _procesar_fotos(self, pr: Proyecto):
+        try:
+            pr.guardar(fase="procesando")
+            trabajo = pr.ruta("trabajo")
+            trabajo.mkdir(exist_ok=True)
+            render = self._render_fotos()
+            fotos = [render.preparar(pr.ruta("material") / n, trabajo) for n in pr.estado["fotos_material"]]
+            texto = pr.estado.get("texto", "")
+            voz, duracion_voz = self._voz(pr), None
+            if voz:
+                pr.paso("Muse Voice Transcribe escucha la nota de voz", 4)
+                turnos = TranscriptorMeta(self.cliente).transcribir(voz, "es")
+                dicho = " ".join(t for _, _, t in turnos)
+                duracion_voz = turnos[-1][1] if turnos else None
+                texto = f"{texto}\n{dicho}".strip()
+                pr.guardar(texto_voz=dicho)
+
+            if pr.estado.get("analisis"):
+                analisis = Analisis(**pr.estado["analisis"])
+            else:
+                pr.paso(f"Muse Spark mira {len(fotos)} foto(s) y lee el mensaje", 8)
+                analisis = AnalizadorFotosSpark(self.cliente).analizar(fotos, texto)
+            pr.guardar(analisis=asdict(analisis))
+            pr.paso(f"Producto: {analisis.nombre}" + (f" · {analisis.marca}" if analisis.marca else ""), 15)
+            principal = fotos[int(analisis.mejor_cuadro_s)] if int(analisis.mejor_cuadro_s) < len(fotos) else fotos[0]
+
+            with ThreadPoolExecutor(max_workers=3) as hilos:
+                catalogo_f = hilos.submit(FotografoMuse(self.cliente, pr.ruta("fotos")).fotos_de_imagen,
+                                          principal, analisis)
+                ficha_f = hilos.submit(self._ficha, pr, analisis, texto, [])
+                pr.paso("SAM 3.1 recorta el producto real en cada foto", 20)
+                render = self._render_fotos(analisis)
+                recortes = list(hilos.map(lambda f: render.recorte(f, trabajo), fotos))
+                pr.paso(f"Producto recortado en {sum(r is not None for r in recortes)} de {len(fotos)} fotos", 35)
+                ficha = ficha_f.result()
+                if ficha.precio and not precio_respaldado(ficha.precio, texto):
+                    ficha.precio = None  # el precio solo sale del comerciante
+                    pr.guardar(ficha=ficha_a_json(ficha),
+                               avisos=pr.estado.get("avisos", []) + ["Falta el precio: escríbelo en la ficha."])
+                catalogo = catalogo_f.result()
+                ficha.imagenes = [str(f) for f in catalogo]
+                pr.guardar(fotos=[pr.relativa(f) for f in catalogo], ficha=ficha_a_json(ficha))
+                pr.paso("Fotos de catálogo listas", 45)
+
+            r = reel_desde_fotos(analisis, texto, fotos, recortes, ficha.precio, voz, duracion_voz,
+                                 pr.ruta("reel_fotos.mp4"), self._puertos_fotos(pr, analisis),
+                                 lambda t: pr.paso(t), rondas=1)
+            self._guardar_reel_fotos(pr, r)
+            self._anuncios(pr, ficha, catalogo[0])
+            pr.guardar(fase="listo", progreso=100)
+            pr.paso("Listo para publicar")
+        except Exception as e:
+            pr.guardar(fase="error", error=f"{e}", detalle_error=traceback.format_exc()[-2000:])
+
+    def _guardar_reel_fotos(self, pr: Proyecto, r):
+        reels = dict(pr.estado.get("reels", {}))
+        reels[LOOK_FOTOS] = {"archivo": pr.relativa(r.reel), "bitacora": r.bitacora,
+                             "duracion": round(r.tomas[-1].fin, 1), "guion": asdict(r.guion)}
+        pr.guardar(reels=reels, look=LOOK_FOTOS, avisos=pr.estado.get("avisos", []) + r.avisos)
+
+    def _cambio_fotos(self, pr: Proyecto, pedido: str):
+        trabajo = pr.ruta("trabajo")
+        analisis = Analisis(**pr.estado["analisis"])
+        render = self._render_fotos(analisis)
+        fotos = [render.preparar(pr.ruta("material") / n, trabajo) for n in pr.estado["fotos_material"]]
+        recortes = [render.recorte(f, trabajo) for f in fotos]
+        ficha = ficha_de_json(pr.estado["ficha"])
+        texto = "\n".join(x for x in (pr.estado.get("texto", ""), pr.estado.get("texto_voz", "")) if x)
+        voz = self._voz(pr)
+        duracion = None
+        if voz:
+            duracion = float(subprocess.run(["ffprobe", "-v", "error", "-show_entries", "format=duration",
+                                             "-of", "csv=p=0", str(voz)], capture_output=True, text=True).stdout or 0) or None
+        anterior = Guion(**pr.estado["reels"][LOOK_FOTOS]["guion"])
+        r = reel_desde_fotos(analisis, texto, fotos, recortes, ficha.precio, voz, duracion,
+                             pr.ruta(f"reel_fotos_{int(time.time())}.mp4"), self._puertos_fotos(pr, analisis),
+                             lambda t: pr.paso(t), pedido=pedido, anterior=anterior, rondas=0)
+        self._guardar_reel_fotos(pr, r)
 
     def _renderizador_basico(self) -> RenderizadorFFmpeg:
         return RenderizadorFFmpeg(RAIZ / "videos" / "maestros", lambda *a: {}, [])
@@ -289,6 +446,10 @@ class Servicio:
         def tarea():
             try:
                 pr.guardar(fase="procesando", progreso=50)
+                if pr.estado.get("tipo") == "fotos":
+                    self._cambio_fotos(pr, pedido)
+                    pr.guardar(fase="listo", progreso=100)
+                    return
                 analisis, montaje, p = self._contexto(pr)
                 anterior = self._reels.get(pr.id) or self._reel_guardado(pr, montaje, p)
                 destino = pr.ruta(f"reel_pedido_{int(time.time())}.mp4")
@@ -332,10 +493,7 @@ class Servicio:
         borrador = (secreto("CAMTOSHOP_EN_VIVO") or "").lower() != "si"
         tienda = None
         if canal_conectado("shopify"):
-            dominio = secreto("SHOPIFY_TIENDA")
-            token = secreto("SHOPIFY_TOKEN") or token_por_credenciales(
-                dominio, secreto("SHOPIFY_CLIENT_ID"), secreto("SHOPIFY_CLIENT_SECRET"))
-            tienda = TiendaShopify(dominio, token, borrador=borrador)
+            tienda = self._tienda(borrador)
         catalogo = CatalogoMeta(secreto("META_CATALOGO_ID"), secreto("META_TOKEN"),
                                 secreto("SHOPIFY_DOMINIO_PUBLICO") or "", borrador=borrador) \
             if canal_conectado("catalogo_meta") else None

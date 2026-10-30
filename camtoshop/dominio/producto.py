@@ -116,3 +116,44 @@ def normalizar_ficha(ficha: Ficha) -> list[str]:
     if ficha.idioma not in ficha.textos:
         avisos.append("Falta el texto en el idioma del video.")
     return avisos
+
+
+@dataclass(frozen=True)
+class ProductoDeTienda:
+    """Un producto que ya existe en la tienda del comerciante: origen de un Reel sin grabar nada."""
+    handle: str
+    titulo: str
+    descripcion: str
+    precio: Precio | None
+    imagenes: tuple[str, ...]  # URLs, la primera es la principal
+    estado: str = "ACTIVE"
+
+
+def texto_plano(html_texto: str) -> str:
+    sin_etiquetas = re.sub(r"<[^>]+>", " ", html_texto or "")
+    return re.sub(r"\s+", " ", sin_etiquetas.replace("&nbsp;", " ").replace("&amp;", "&")).strip()
+
+
+def mensaje_desde_tienda(p: ProductoDeTienda, maximo: int = 1200) -> str:
+    """Lo que la tienda «dice» del producto, en el mismo formato que el mensaje de un comerciante.
+
+    El precio va escrito en cifras para que sea la única fuente del precio del Reel.
+    """
+    partes = [p.titulo, recortar(p.descripcion, maximo)]
+    if p.precio:
+        partes.append(f"Precio: {p.precio.para_api()} {p.precio.moneda}")
+    return ". ".join(x for x in partes if x)
+
+
+def apto_para_reel(p: ProductoDeTienda) -> bool:
+    return bool(p.imagenes) and p.precio is not None
+
+
+def elegir_para_reel(productos: list[ProductoDeTienda], maximo: int = 6,
+                     incluir_borradores: bool = False) -> list[ProductoDeTienda]:
+    """Productos que sirven para un Reel: con foto y con precio, activos (o borradores si se eligen a mano).
+
+    Nunca más de `maximo` por lote: cada Reel lo aprueba el comerciante antes de publicarse.
+    """
+    return [p for p in productos if apto_para_reel(p)
+            and (p.estado == "ACTIVE" or (incluir_borradores and p.estado == "DRAFT"))][:maximo]

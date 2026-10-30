@@ -8,6 +8,8 @@
 - **Three Meta ad variants** (benefit, story, offer), with copy and a designed creative.
 - **One-click publishing** to a **Shopify** store, the **Meta catalog** (Instagram & Facebook Shops, WhatsApp catalog) and **Instagram Reels**.
 
+**No video? No problem.** Camtoshop also builds the Reel from **a few photos** (plus a short message and, optionally, a voice note) or **straight from the products already in a Shopify store**: SAM 3.1 cuts out the real product, Muse Spark writes the script, Muse Image places the *same* product in a lifestyle scene, and the product moves in layers over its own photo with giant text behind it. Nobody has to film anything.
+
 Built solo for the Meta Global AI Developer Hackathon (Oct 27 – Nov 4, 2026), Startup track. **All code in this repository was written during the hackathon**; see the commit history.
 
 ## Meta models, and what each one does
@@ -24,6 +26,16 @@ Built solo for the Meta Global AI Developer Hackathon (Oct 27 – Nov 4, 2026), 
 | Catalog photos, cover shot, product-in-use scenes, end card, ad creatives | **Muse Image** (edits from the SAM cutout) |
 | Listing and ad copy, in several languages | **Muse Spark** |
 | Publish the product and the Reel | **Meta Graph API** (Catalog `items_batch`, Instagram Reels resumable upload) |
+
+## Three ways in, one engine
+
+| Input | What happens |
+|---|---|
+| **Talking video** | The full editing pipeline below. |
+| **1–8 photos + message** (+ optional voice note) | Spark identifies the product → SAM cuts it out of each photo → Spark writes hook, 3 benefits and call to action → Muse Image makes a lifestyle scene from the real cutout (labeled as AI) → layered render → Spark reviews and rewrites the script if needed. The voice note becomes the Reel's voice. |
+| **Shopify store** | Pick up to 6 products; each one becomes a photo Reel using the store's own photos, description and price. |
+
+**Trust rules in the domain** (tested): the price only comes from the merchant or the store, never from the model; promises like free shipping, warranty, organic or discounts are removed unless the merchant said them; AI scenes always start from the real product cutout; nothing is published without the merchant's click, and stores get drafts by default.
 
 ## How the agent works
 

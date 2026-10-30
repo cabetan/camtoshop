@@ -5,7 +5,7 @@ from __future__ import annotations
 from pathlib import Path
 from typing import Literal
 
-from fastapi import FastAPI, HTTPException, UploadFile
+from fastapi import FastAPI, File, Form, HTTPException, UploadFile
 from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, Field
@@ -15,6 +15,9 @@ from camtoshop.dominio.direccion import LOOKS
 
 ESTATICO = Path(__file__).parent / "estatico"
 FORMATOS_VIDEO = {".mov", ".mp4", ".m4v"}
+FORMATOS_FOTO = {".jpg", ".jpeg", ".png", ".webp", ".heic"}
+FORMATOS_VOZ = {".m4a", ".mp3", ".ogg", ".opus", ".wav", ".aac"}
+MAX_FOTOS = 8
 
 app = FastAPI(title="Camtoshop")
 servicio = Servicio()
@@ -49,10 +52,42 @@ class PedidoPublicar(BaseModel):
 
 
 @app.post("/api/proyectos")
-def crear(video: UploadFile):
-    if Path(video.filename or "").suffix.lower() not in FORMATOS_VIDEO:
-        raise HTTPException(400, "Sube un video .mov o .mp4")
-    return {"id": servicio.crear(video.filename, video.file).id}
+def crear(archivos: list[UploadFile] = File(...), texto: str = Form("", max_length=1500)):
+    """Un video, o de 1 a 8 fotos con un mensaje y, si se quiere, una nota de voz."""
+    def tipo(a: UploadFile) -> str:
+        ext = Path(a.filename or "").suffix.lower()
+        return "video" if ext in FORMATOS_VIDEO else "foto" if ext in FORMATOS_FOTO else "voz" if ext in FORMATOS_VOZ else ""
+    por_tipo: dict[str, list[UploadFile]] = {}
+    for a in archivos:
+        por_tipo.setdefault(tipo(a), []).append(a)
+    if "" in por_tipo:
+        raise HTTPException(400, "Formato no soportado: sube un video, fotos (jpg, png) o una nota de voz")
+    if por_tipo.get("video"):
+        video = por_tipo["video"][0]
+        return {"id": servicio.crear(video.filename, video.file).id}
+    fotos = por_tipo.get("foto", [])
+    if not 1 <= len(fotos) <= MAX_FOTOS:
+        raise HTTPException(400, f"Sube un video o entre 1 y {MAX_FOTOS} fotos del producto")
+    voz = por_tipo.get("voz", [None])[0]
+    return {"id": servicio.crear_desde_fotos([(f.filename, f.file) for f in fotos], texto.strip(),
+                                             (voz.filename, voz.file) if voz else None).id}
+
+
+class PedidoTienda(BaseModel):
+    handles: list[str] = Field(min_length=1, max_length=6)
+
+
+@app.get("/api/tienda/productos")
+def productos_de_tienda():
+    try:
+        return servicio.productos_de_tienda()
+    except RuntimeError as e:
+        raise HTTPException(409, str(e))
+
+
+@app.post("/api/tienda/reels")
+def reels_desde_tienda(pedido: PedidoTienda):
+    return {"ids": servicio.reels_desde_tienda(pedido.handles)}
 
 
 @app.get("/api/proyectos")

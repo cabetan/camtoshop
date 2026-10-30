@@ -19,7 +19,7 @@ from pathlib import Path
 
 import requests
 
-from camtoshop.dominio.producto import Ficha
+from camtoshop.dominio.producto import Ficha, ProductoDeTienda, precio_valido, texto_plano
 from camtoshop.dominio.publicacion import EnTienda
 
 VERSION = "2026-10"
@@ -56,6 +56,32 @@ class TiendaShopify:
     def _errores(resultado: dict):
         if resultado.get("userErrors"):
             raise RuntimeError("Shopify: " + "; ".join(e["message"] for e in resultado["userErrors"]))
+
+    # --- Lectura: la tienda como origen --------------------------------------
+
+    def productos(self, maximo: int = 50) -> list[ProductoDeTienda]:
+        """Productos de la tienda (más recientes primero) con sus fotos y precio."""
+        salida, cursor = [], None
+        while len(salida) < maximo:
+            datos = self._gql("""
+                query($n: Int!, $c: String) {
+                  products(first: $n, after: $c, sortKey: UPDATED_AT, reverse: true) {
+                    pageInfo { hasNextPage endCursor }
+                    nodes { handle title descriptionHtml status
+                      priceRangeV2 { minVariantPrice { amount currencyCode } }
+                      media(first: 6) { nodes { ... on MediaImage { image { url } } } } }
+                  }
+                }""", {"n": min(25, maximo - len(salida)), "c": cursor})["products"]
+            for n in datos["nodes"]:
+                precio = n["priceRangeV2"]["minVariantPrice"]
+                imagenes = tuple(m["image"]["url"] for m in n["media"]["nodes"] if m.get("image"))
+                salida.append(ProductoDeTienda(n["handle"], n["title"], texto_plano(n["descriptionHtml"]),
+                                               precio_valido(float(precio["amount"]), precio["currencyCode"]),
+                                               imagenes, n["status"]))
+            if not datos["pageInfo"]["hasNextPage"]:
+                break
+            cursor = datos["pageInfo"]["endCursor"]
+        return salida
 
     # --- Archivos -----------------------------------------------------------
 

@@ -25,10 +25,23 @@
   h1 em { font-style: normal; color: var(--acento); }
   h2 { font: 700 26px/1.1 "Barlow Condensed", sans-serif; text-transform: uppercase; letter-spacing: .4px; margin: 0 0 12px; }
   .lema { color: var(--suave); font-size: 18px; max-width: 620px; }
-  .soltar { margin: 34px 0; border: 2px dashed var(--borde); border-radius: 24px; padding: 54px 24px; text-align: center; cursor: pointer; transition: .2s; background: var(--panel); }
+  .soltar { display: block; margin: 34px 0; border: 2px dashed var(--borde); border-radius: 24px; padding: 54px 24px; text-align: center; cursor: pointer; transition: .2s; background: var(--panel); }
   .soltar:hover, .soltar.encima { border-color: var(--acento); background: #1b1a14; }
   .soltar strong { display: block; font-size: 20px; margin-bottom: 6px; }
   .soltar small { color: var(--suave); }
+  #material { margin: -14px 0 24px; display: grid; gap: 12px; }
+  .miniaturas { display: flex; gap: 10px; flex-wrap: wrap; }
+  .mini { position: relative; width: 84px; height: 84px; border-radius: 12px; overflow: hidden; border: 1px solid var(--borde); }
+  .mini img { width: 100%; height: 100%; object-fit: cover; }
+  .mini button { position: absolute; top: 4px; right: 4px; width: 22px; height: 22px; border-radius: 50%; border: 0; background: #000a; color: #fff; cursor: pointer; }
+  .voz { color: var(--suave); cursor: pointer; font-size: 14px; }
+  #tienda { margin: 10px 0 30px; }
+  .productos { display: grid; grid-template-columns: repeat(auto-fill, minmax(230px, 1fr)); gap: 10px; margin: 14px 0; }
+  .producto { display: flex; gap: 10px; align-items: center; background: var(--panel); border: 1px solid var(--borde); border-radius: 14px; padding: 8px; cursor: pointer; }
+  .producto input { width: auto; }
+  .producto img, .producto .sin-img { width: 52px; height: 52px; border-radius: 10px; object-fit: cover; background: var(--panel2); }
+  .producto small { display: block; color: var(--suave); }
+  .producto.no-apto { opacity: .5; cursor: default; }
   .modelos { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 18px; }
   .chip { border: 1px solid var(--borde); border-radius: 99px; padding: 4px 12px; font-size: 13px; color: var(--suave); background: var(--panel); }
   .lista { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 14px; }
@@ -98,7 +111,9 @@
 const T = {
   en: {
     titulo: 'Film it. <em>Sell it.</em>', lema: 'Talk about your product on your phone. Camtoshop edits the Reel, shoots the catalog photos, writes the listing and the ads, and publishes to your store, Instagram and Facebook.',
-    soltar: 'Drop your product video here', soltar2: 'or click to choose a .mov / .mp4 from your phone',
+    soltar: 'Drop a product video, or a few photos', soltar2: 'No video? Photos are enough: Camtoshop makes the Reel from them',
+    tienda: 'Or straight from your Shopify store', tiendaSub: 'Pick up to 6 products: each gets its own Reel, ready for you to approve', hacerReels: 'Make Reels', sinFoto: 'needs a photo and a price', borrador: 'draft',
+    mensaje: 'What is it and how much? e.g. "Soy candle, lavender, 85,000 COP"', crear: 'Make my Reel', voz: 'Optional: add a voice note (it becomes the Reel voice)', quitar: 'Remove',
     subiendo: 'Uploading…', recientes: 'Recent products', procesando: 'Working on it', listo: 'Ready', error: 'Error', en_cola: 'Queued',
     agente: 'What the agent is doing', reel: 'Reel', looks: { directo: 'Direct', anuncio: 'Ad', premium: 'Premium' },
     pedido: 'Ask for a change, e.g. "make it calmer"', pedir: 'Redo', ficha: 'Listing', fotos: 'Photos', anuncios: 'Ads', publicar: 'Publish',
@@ -112,7 +127,9 @@ const T = {
   },
   es: {
     titulo: 'Grábalo. <em>Véndelo.</em>', lema: 'Habla de tu producto con el celular. Camtoshop edita el Reel, hace las fotos de catálogo, escribe la ficha y los anuncios, y publica en tu tienda, Instagram y Facebook.',
-    soltar: 'Suelta aquí el video de tu producto', soltar2: 'o haz clic para elegir un .mov / .mp4 de tu celular',
+    soltar: 'Suelta un video del producto, o unas fotos', soltar2: '¿No tienes video? Con fotos basta: Camtoshop hace el Reel con ellas',
+    tienda: 'O directo desde tu tienda Shopify', tiendaSub: 'Elige hasta 6 productos: cada uno tendrá su Reel, listo para que lo apruebes', hacerReels: 'Hacer los Reels', sinFoto: 'le falta foto o precio', borrador: 'borrador',
+    mensaje: '¿Qué es y cuánto vale? Ej.: "Vela de soya, lavanda, 85 mil"', crear: 'Hacer mi Reel', voz: 'Opcional: agrega una nota de voz (será la voz del Reel)', quitar: 'Quitar',
     subiendo: 'Subiendo…', recientes: 'Productos recientes', procesando: 'Trabajando', listo: 'Listo', error: 'Error', en_cola: 'En cola',
     agente: 'Lo que está haciendo el agente', reel: 'Reel', looks: { directo: 'Directo', anuncio: 'Anuncio', premium: 'Premium' },
     pedido: 'Pide un cambio, p. ej. "hazlo más sobrio"', pedir: 'Rehacer', ficha: 'Ficha', fotos: 'Fotos', anuncios: 'Anuncios', publicar: 'Publicar',
@@ -151,6 +168,18 @@ const BITACORA_EN = [
   [/^Subtítulos corregidos: (.*)$/, 'Captions fixed: $1'],
   [/^Revisión no disponible, se entrega la versión (\d+)(.*)$/, 'Review unavailable, delivering version $1$2'],
   [/^Pedido: (.*) → look (.*)$/, 'Request: $1 → $2 look'],
+  [/^Muse Spark mira (\d+) foto\(s\) y lee el mensaje$/, 'Muse Spark looks at $1 photo(s) and reads the message'],
+  [/^Muse Voice Transcribe escucha la nota de voz$/, 'Muse Voice Transcribe listens to the voice note'],
+  [/^SAM 3\.1 recorta el producto real en cada foto$/, 'SAM 3.1 cuts out the real product in every photo'],
+  [/^Producto recortado en (\d+) de (\d+) fotos$/, 'Product cut out in $1 of $2 photos'],
+  [/^Muse Spark escribe el guion del Reel$/, 'Muse Spark writes the Reel script'],
+  [/^Muse Spark reescribe el guion: (.*)$/, 'Muse Spark rewrites the script: $1'],
+  [/^Muse Image pone el producto real en una escena de uso$/, 'Muse Image places the real product in a lifestyle scene'],
+  [/^Renderizando (\d+) s: producto recortado con SAM, en capas$/, 'Rendering $1 s: SAM-cut product, in layers'],
+  [/^Muse Spark revisa el Reel: (.*)$/, 'Muse Spark reviews the Reel: $1'],
+  [/^No se pudo revisar el Reel: (.*)$/, 'Could not review the Reel: $1'],
+  [/^Quité «(.*)»: el comerciante no lo dijo\.$/, 'Removed “$1”: the merchant never said it.'],
+  [/^Cambié el gancho «(.*)»: prometía algo que el comerciante no dijo\.$/, 'Changed the hook “$1”: it promised something the merchant never said.'],
 ];
 const bitacora = s => L === 'es' ? s : (BITACORA_EN.find(([r]) => r.test(s)) ? s.replace(...BITACORA_EN.find(([r]) => r.test(s))) : s);
 const t = k => T[L][k];
@@ -172,24 +201,75 @@ async function inicio() {
   clearInterval(sondeo);
   $('#app').innerHTML = `
     <h1>${t('titulo')}</h1><p class="lema">${t('lema')}</p>
-    <label class="soltar" id="soltar"><input type="file" accept="video/*" hidden id="archivo">
-      <strong>${t('soltar')}</strong><small>${t('soltar2')}</small><div id="subida"></div></label>
+    <label class="soltar" id="soltar"><input type="file" accept="video/*,image/*,audio/*" multiple hidden id="archivo">
+      <strong>${t('soltar')}</strong><small>${t('soltar2')}</small></label>
+    <div id="material" class="oculto"></div><div id="subida"></div>
+    <div id="tienda" class="oculto"><h2>${t('tienda')}</h2><p class="lema" style="margin-top:-6px">${t('tiendaSub')}</p>
+      <div class="productos" id="productos"></div><button class="boton" id="hacerReels" disabled>${t('hacerReels')}</button></div>
     <div class="modelos">${['Muse Spark', 'Muse Voice Transcribe', 'SAM 3.1', 'Muse Image', 'wav2vec2 XLSR-53'].map(m => `<span class="chip">${m}</span>`).join('')}</div>
     <h2 style="margin-top:40px">${t('recientes')}</h2><div class="lista" id="lista"></div>`;
   const zona = $('#soltar');
   zona.ondragover = e => { e.preventDefault(); zona.classList.add('encima'); };
   zona.ondragleave = () => zona.classList.remove('encima');
-  zona.ondrop = e => { e.preventDefault(); zona.classList.remove('encima'); subir(e.dataTransfer.files[0]); };
-  $('#archivo').onchange = e => subir(e.target.files[0]);
+  zona.ondrop = e => { e.preventDefault(); zona.classList.remove('encima'); elegir(e.dataTransfer.files); };
+  $('#archivo').onchange = e => elegir(e.target.files);
+  material = { fotos: [], voz: null };
+  api('/api/tienda/productos').then(pintarTienda).catch(() => {});
   const proyectos = await api('/api/proyectos');
   $('#lista').innerHTML = proyectos.map(p => `
     <a class="tarjeta" href="#/p/${p.id}"><div class="fase">${t(p.fase) || p.fase} · ${p.progreso}%</div>
     <strong>${esc(p.analisis?.nombre || p.nombre_archivo)}</strong><div style="color:var(--suave);font-size:13px">${new Date(p.creado * 1000).toLocaleString(L)}</div></a>`).join('');
 }
 
-function subir(archivo) {
-  if (!archivo) return;
-  const datos = new FormData(); datos.append('video', archivo);
+function pintarTienda(productos) {
+  if (!productos.length) return;
+  $('#tienda').classList.remove('oculto');
+  $('#productos').innerHTML = productos.map(p => `<label class="producto ${p.apto ? '' : 'no-apto'}">
+    <input type="checkbox" value="${esc(p.handle)}" ${p.apto ? '' : 'disabled'}>
+    ${p.imagenes[0] ? `<img src="${esc(p.imagenes[0])}&width=200">` : '<div class="sin-img"></div>'}
+    <span><strong>${esc(p.titulo)}</strong><small>${esc(p.precio_texto)}${p.estado === 'DRAFT' ? ' · ' + t('borrador') : ''}${p.apto ? '' : ' · ' + t('sinFoto')}</small></span></label>`).join('');
+  const marcados = () => [...document.querySelectorAll('#productos input:checked')].map(c => c.value);
+  $('#productos').onchange = () => {
+    const m = marcados();
+    document.querySelectorAll('#productos input:not(:checked)').forEach(c => c.disabled = m.length >= 6 || c.closest('.no-apto'));
+    $('#hacerReels').disabled = !m.length;
+  };
+  $('#hacerReels').onclick = async () => {
+    $('#hacerReels').disabled = true;
+    const r = await api('/api/tienda/reels', { method: 'POST', body: JSON.stringify({ handles: marcados() }) });
+    location.hash = r.ids.length === 1 ? '#/p/' + r.ids[0] : '#/'; inicio();
+  };
+}
+
+let material = { fotos: [], voz: null };
+function elegir(lista) {
+  const archivos = [...lista];
+  const video = archivos.find(a => a.type.startsWith('video/') || /\.(mov|mp4|m4v)$/i.test(a.name));
+  if (video) return subir([video]);
+  material.fotos.push(...archivos.filter(a => a.type.startsWith('image/') || /\.(jpe?g|png|webp|heic)$/i.test(a.name)));
+  material.fotos = material.fotos.slice(0, 8);
+  material.voz = archivos.find(a => a.type.startsWith('audio/')) || material.voz;
+  pintarMaterial();
+}
+function pintarMaterial() {
+  const caja = $('#material');
+  caja.classList.toggle('oculto', !material.fotos.length);
+  if (!material.fotos.length) return;
+  const texto = $('#mensaje')?.value || '';
+  caja.innerHTML = `<div class="miniaturas">${material.fotos.map((f, i) => `<div class="mini"><img src="${URL.createObjectURL(f)}"><button data-i="${i}" title="${t('quitar')}">×</button></div>`).join('')}</div>
+    <textarea id="mensaje" rows="2" maxlength="1500" placeholder='${esc(t('mensaje'))}'>${esc(texto)}</textarea>
+    <label class="voz"><input type="file" accept="audio/*" hidden id="nota">🎙 ${material.voz ? esc(material.voz.name) : t('voz')}</label>
+    <button class="boton" id="crear">${t('crear')}</button>`;
+  caja.querySelectorAll('.mini button').forEach(b => b.onclick = () => { material.fotos.splice(+b.dataset.i, 1); pintarMaterial(); });
+  $('#nota').onchange = e => { material.voz = e.target.files[0] || null; pintarMaterial(); };
+  $('#crear').onclick = () => subir([...material.fotos, ...(material.voz ? [material.voz] : [])], $('#mensaje').value);
+}
+
+function subir(archivos, texto = '') {
+  if (!archivos.length) return;
+  const datos = new FormData();
+  archivos.forEach(a => datos.append('archivos', a));
+  datos.append('texto', texto);
   const x = new XMLHttpRequest();
   x.open('POST', '/api/proyectos');
   x.upload.onprogress = e => $('#subida').innerHTML = `<div class="progreso"><div style="width:${(e.loaded / e.total * 100).toFixed(0)}%"></div></div>${t('subiendo')}`;
@@ -238,6 +318,7 @@ async function proyecto(id) {
       $('#telefono').innerHTML = `<video src="/api/proyectos/${id}/archivos/${reel.archivo}?v=${Date.now()}" controls playsinline loop></video>`;
     }
     const ocupado = e.fase === 'procesando' || e.fase === 'en_cola';
+    $('#looks').classList.toggle('oculto', e.tipo === 'fotos');
     $('#looks').innerHTML = Object.keys(T[L].looks).map(k => `<button data-look="${k}" class="${k === e.look ? 'activo' : ''}" ${ocupado ? 'disabled' : ''}>${T[L].looks[k]}</button>`).join('');
     document.querySelectorAll('#looks button').forEach(b => b.onclick = async () => {
       await api(`/api/proyectos/${id}/look`, { method: 'POST', body: JSON.stringify({ look: b.dataset.look }) });

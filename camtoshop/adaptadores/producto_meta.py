@@ -86,7 +86,12 @@ class FotografoMuse:
         subprocess.run(["ffmpeg", "-y", "-loglevel", "error", "-ss", f"{analisis.mejor_cuadro_s:.2f}",
                         "-i", str(video), "-frames:v", "1", "-vf", "scale=1080:-2", "-q:v", "2", str(cuadro)],
                        check=True)
-        recorte = self._recortar(cuadro, analisis.conceptos_sam + [RESPALDO_SAM])
+        return self.fotos_de_imagen(cuadro, analisis)
+
+    def fotos_de_imagen(self, imagen: Path, analisis: Analisis) -> list[Path]:
+        """Igual que `fotos`, pero desde una foto que mandó el comerciante."""
+        self._trabajo.mkdir(parents=True, exist_ok=True)
+        recorte = self._recortar(imagen, analisis.conceptos_sam + [RESPALDO_SAM])
         fotos = []
         for nombre, prompt, tamano in (("catalogo.png", ESTUDIO, "1024x1024"), ("ambiente.png", AMBIENTE, "1024x1024")):
             destino = self._trabajo / nombre
