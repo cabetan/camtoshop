@@ -33,9 +33,11 @@ from camtoshop.adaptadores.reel_meta import (
 )
 from camtoshop.adaptadores.render_ffmpeg import RenderizadorFFmpeg
 from camtoshop.adaptadores.render_fotos import RenderizadorFotos
+from camtoshop.adaptadores.repo_comercios import RepoComercios
 from camtoshop.adaptadores.sam_mascaras import mascaras
 from camtoshop.adaptadores.shopify import TiendaShopify, token_por_credenciales
 from camtoshop.dominio.anuncios import normalizar_anuncios
+from camtoshop.dominio.comercio import Comercio
 from camtoshop.dominio.direccion import LOOK_POR_DEFECTO, LOOKS, Propuesta, armar_plan, centros_de_zoom
 from camtoshop.dominio.editar_reel import Montaje, Puertos, ResultadoReel, dirigir_y_revisar, preparar_montaje, rehacer
 from camtoshop.dominio.producto import (
@@ -77,6 +79,9 @@ class Adelantado:
 class Proyecto:
     """Estado persistente de un video procesado."""
 
+    # Quien quiera enterarse cuando un proyecto termina (por ejemplo, el agente de WhatsApp).
+    al_terminar = None
+
     def __init__(self, carpeta: Path):
         self.carpeta = carpeta
         self.id = carpeta.name
@@ -93,6 +98,8 @@ class Proyecto:
             temporal = self.carpeta / "estado.tmp"
             temporal.write_text(json.dumps(self.estado, ensure_ascii=False, indent=1))
             temporal.replace(self.carpeta / "estado.json")
+        if cambios.get("fase") in {"listo", "error"} and Proyecto.al_terminar:
+            threading.Thread(target=Proyecto.al_terminar, args=(self,), daemon=True).start()
 
     def paso(self, texto: str, progreso: int | None = None):
         with self._cerrojo:
@@ -118,6 +125,7 @@ class Servicio:
         self._alineador = None
         self._montajes: dict[str, Montaje] = {}
         self._reels: dict[str, ResultadoReel] = {}
+        self.repo_comercios = RepoComercios(datos.parent)
         # Un proyecto a la vez: el render usa toda la máquina.
         self._cola = ThreadPoolExecutor(max_workers=1)
 
@@ -161,7 +169,7 @@ class Servicio:
 
     # --- Proyectos ----------------------------------------------------------
 
-    def crear(self, nombre_archivo: str, contenido) -> Proyecto:
+    def crear(self, nombre_archivo: str, contenido, extra: dict | None = None) -> Proyecto:
         identificador = time.strftime("%Y%m%d-%H%M%S-") + uuid.uuid4().hex[:6]
         carpeta = self._datos / identificador
         carpeta.mkdir(parents=True)
@@ -169,12 +177,13 @@ class Servicio:
         with (carpeta / f"original{extension}").open("wb") as destino:
             shutil.copyfileobj(contenido, destino, length=8 * 1024 * 1024)
         pr = Proyecto(carpeta)
-        pr.guardar(nombre_archivo=nombre_archivo)
+        pr.guardar(nombre_archivo=nombre_archivo, **(extra or {}))
         self._cola.submit(self._procesar, pr)
         return pr
 
     def crear_desde_fotos(self, fotos: list[tuple[str, object]], texto: str,
-                          voz: tuple[str, object] | None = None, origen: str = "fotos") -> Proyecto:
+                          voz: tuple[str, object] | None = None, origen: str = "fotos",
+                          extra: dict | None = None) -> Proyecto:
         """Proyecto sin video: fotos del producto, lo que escribió el comerciante y, si quiere, una nota de voz."""
         identificador = time.strftime("%Y%m%d-%H%M%S-") + uuid.uuid4().hex[:6]
         carpeta = self._datos / identificador
@@ -190,7 +199,7 @@ class Servicio:
                 shutil.copyfileobj(voz[1], f)
         pr = Proyecto(carpeta)
         pr.guardar(tipo="fotos", origen=origen, texto=texto, fotos_material=nombres, look=LOOK_FOTOS,
-                   nombre_archivo=f"{len(nombres)} foto" + ("s" if len(nombres) > 1 else ""))
+                   nombre_archivo=f"{len(nombres)} foto" + ("s" if len(nombres) > 1 else ""), **(extra or {}))
         self._cola.submit(self._procesar_fotos, pr)
         return pr
 
@@ -486,19 +495,37 @@ class Servicio:
         pr.guardar(ficha=ficha_a_json(ficha), avisos=avisos)
         return pr.estado["ficha"]
 
-    def publicar(self, pr: Proyecto, canales: list[str]) -> list[dict]:
+    def _destinos(self, comercio: Comercio | None, borrador: bool):
+        """(tienda, catálogo, red) donde publica el comercio: sus cuentas, o las del servidor si es la demo."""
+        if comercio is None or comercio.demo:
+            tienda = self._tienda(borrador) if canal_conectado("shopify") else None
+            catalogo = CatalogoMeta(secreto("META_CATALOGO_ID"), secreto("META_TOKEN"),
+                                    secreto("SHOPIFY_DOMINIO_PUBLICO") or "", borrador=borrador) \
+                if canal_conectado("catalogo_meta") else None
+            red = InstagramReels(secreto("IG_USUARIO_ID"), secreto("IG_TOKEN") or secreto("META_TOKEN")) \
+                if canal_conectado("instagram") else None
+            return tienda, catalogo, red
+        con, repo = comercio.conexiones, self.repo_comercios
+        meta, shopify = repo.token(comercio.id, "meta"), repo.token(comercio.id, "shopify")
+        tienda = TiendaShopify(con.shopify_tienda, shopify, borrador=borrador) if con.shopify_tienda and shopify else None
+        catalogo = CatalogoMeta(con.catalogo_id, meta, borrador=borrador) if con.catalogo_id and meta else None
+        red = InstagramReels(con.instagram_id, meta) if con.instagram_id and meta else None
+        return tienda, catalogo, red
+
+    def canales_de(self, comercio: Comercio | None) -> dict[str, bool]:
+        if comercio is None or comercio.demo:
+            return self.canales()
+        tienda, catalogo, red = self._destinos(comercio, True)
+        return {"shopify": tienda is not None, "catalogo_meta": catalogo is not None, "instagram": red is not None}
+
+    def publicar(self, pr: Proyecto, canales: list[str], comercio: Comercio | None = None) -> list[dict]:
         ficha = ficha_de_json(pr.estado["ficha"])
         reel = pr.ruta(pr.estado["reels"][pr.estado["look"]]["archivo"])
         # Publicar en vivo es una decisión explícita: sin CAMTOSHOP_EN_VIVO=si todo queda en borrador.
         borrador = (secreto("CAMTOSHOP_EN_VIVO") or "").lower() != "si"
-        tienda = None
-        if canal_conectado("shopify"):
-            tienda = self._tienda(borrador)
-        catalogo = CatalogoMeta(secreto("META_CATALOGO_ID"), secreto("META_TOKEN"),
-                                secreto("SHOPIFY_DOMINIO_PUBLICO") or "", borrador=borrador) \
-            if canal_conectado("catalogo_meta") else None
-        red = InstagramReels(secreto("IG_USUARIO_ID"), secreto("IG_TOKEN") or secreto("META_TOKEN")) \
-            if canal_conectado("instagram") else None
+        if comercio is None and pr.estado.get("comercio_id"):
+            comercio = self.repo_comercios.obtener(pr.estado["comercio_id"])
+        tienda, catalogo, red = self._destinos(comercio, borrador)
         gancho = (pr.estado.get("analisis") or {}).get("gancho", "")
         resultados = [asdict(r) for r in publicar(ficha, reel, None, canales, tienda, catalogo, red, gancho)]
         pr.guardar(publicaciones=pr.estado.get("publicaciones", []) + [{"t": time.time(), "resultados": resultados}])

@@ -5,11 +5,16 @@ from __future__ import annotations
 from pathlib import Path
 from typing import Literal
 
-from fastapi import FastAPI, File, Form, HTTPException, UploadFile
-from fastapi.responses import FileResponse
+import threading
+
+from fastapi import FastAPI, File, Form, HTTPException, Request, UploadFile
+from fastapi.responses import FileResponse, PlainTextResponse
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, Field
 
+from camtoshop.adaptadores.config import secreto
+from camtoshop.adaptadores.whatsapp import firma_valida
+from camtoshop.aplicacion.agente_whatsapp import AgenteWhatsApp
 from camtoshop.aplicacion.servicio import Proyecto, Servicio
 from camtoshop.dominio.direccion import LOOKS
 
@@ -21,6 +26,7 @@ MAX_FOTOS = 8
 
 app = FastAPI(title="Camtoshop")
 servicio = Servicio()
+agente = AgenteWhatsApp(servicio)
 
 
 def _proyecto(identificador: str) -> Proyecto:
@@ -88,6 +94,27 @@ def productos_de_tienda():
 @app.post("/api/tienda/reels")
 def reels_desde_tienda(pedido: PedidoTienda):
     return {"ids": servicio.reels_desde_tienda(pedido.handles)}
+
+
+# --- WhatsApp -------------------------------------------------------------------
+
+@app.get("/webhook/whatsapp")
+def verificar_webhook(request: Request):
+    """Meta confirma la URL del webhook con el token de verificación que configuramos."""
+    q = request.query_params
+    if q.get("hub.mode") == "subscribe" and q.get("hub.verify_token") == secreto("WA_VERIFICACION"):
+        return PlainTextResponse(q.get("hub.challenge", ""))
+    raise HTTPException(403, "Token de verificación inválido")
+
+
+@app.post("/webhook/whatsapp")
+async def webhook_whatsapp(request: Request):
+    cuerpo = await request.body()
+    if not firma_valida(cuerpo, request.headers.get("x-hub-signature-256", ""), secreto("META_APP_SECRET") or ""):
+        raise HTTPException(403, "Firma inválida")
+    # Meta espera un 200 enseguida: el trabajo se hace aparte.
+    threading.Thread(target=agente.recibir, args=(await request.json(),), daemon=True).start()
+    return {"ok": True}
 
 
 @app.get("/api/proyectos")
