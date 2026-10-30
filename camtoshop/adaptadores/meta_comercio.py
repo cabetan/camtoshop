@@ -1,7 +1,8 @@
 """Catálogo de Meta (Instagram y Facebook Shops, catálogo de WhatsApp) y publicación de Reels en Instagram.
 
-Ambos usan la Graph API con un token de usuario del sistema del Business Manager (META_TOKEN),
-con los permisos catalog_management, instagram_basic e instagram_content_publish.
+El catálogo usa un token de usuario del sistema del Business Manager (META_TOKEN) con catalog_management.
+Instagram usa el mismo token, con instagram_basic e instagram_content_publish, sobre una página vinculada a la cuenta
+(o IG_TOKEN, el token propio de la cuenta, si se prefiere el inicio de sesión de Instagram).
 """
 
 from __future__ import annotations
@@ -16,6 +17,7 @@ from camtoshop.dominio.producto import Ficha
 from camtoshop.dominio.publicacion import EnTienda
 
 GRAPH = "https://graph.facebook.com/v23.0"
+GRAPH_IG = "https://graph.instagram.com/v23.0"
 
 
 def _revisar(r: requests.Response, que: str) -> dict:
@@ -91,9 +93,11 @@ class InstagramReels:
     def __init__(self, usuario_id: str, token: str):
         self._usuario = usuario_id
         self._token = token
+        # Los tokens del inicio de sesión de Instagram (IGAA…) van a graph.instagram.com; los de Facebook, a la Graph API.
+        self._graph = GRAPH_IG if token.startswith("IG") else GRAPH
 
     def publicar_reel(self, video: Path, pie: str, portada: Path | None) -> str:
-        contenedor = _revisar(requests.post(f"{GRAPH}/{self._usuario}/media", timeout=60, data={
+        contenedor = _revisar(requests.post(f"{self._graph}/{self._usuario}/media", timeout=60, data={
             "media_type": "REELS", "upload_type": "resumable", "caption": pie,
             "share_to_feed": "true", "access_token": self._token,
         }), "Instagram (contenedor)")
@@ -102,17 +106,17 @@ class InstagramReels:
             "Authorization": f"OAuth {self._token}", "offset": "0", "file_size": str(len(datos)),
         }), "Instagram (subida)")
         self._esperar(contenedor["id"])
-        publicado = _revisar(requests.post(f"{GRAPH}/{self._usuario}/media_publish", timeout=60, data={
+        publicado = _revisar(requests.post(f"{self._graph}/{self._usuario}/media_publish", timeout=60, data={
             "creation_id": contenedor["id"], "access_token": self._token,
         }), "Instagram (publicación)")
-        enlace = _revisar(requests.get(f"{GRAPH}/{publicado['id']}", timeout=30, params={
+        enlace = _revisar(requests.get(f"{self._graph}/{publicado['id']}", timeout=30, params={
             "fields": "permalink", "access_token": self._token,
         }), "Instagram (enlace)")
         return enlace.get("permalink", "")
 
     def _esperar(self, contenedor: str, intentos: int = 60):
         for _ in range(intentos):
-            r = _revisar(requests.get(f"{GRAPH}/{contenedor}", timeout=30, params={
+            r = _revisar(requests.get(f"{self._graph}/{contenedor}", timeout=30, params={
                 "fields": "status_code,status", "access_token": self._token,
             }), "Instagram (estado)")
             if r.get("status_code") == "FINISHED":
@@ -123,7 +127,7 @@ class InstagramReels:
         raise RuntimeError("Instagram tardó demasiado en procesar el video.")
 
     def metricas(self, media_id: str) -> dict:
-        r = _revisar(requests.get(f"{GRAPH}/{media_id}/insights", timeout=30, params={
+        r = _revisar(requests.get(f"{self._graph}/{media_id}/insights", timeout=30, params={
             "metric": "views,reach,likes,comments,shares,saved", "access_token": self._token,
         }), "Instagram (métricas)")
         return {m["name"]: m["values"][0]["value"] for m in r.get("data", [])}

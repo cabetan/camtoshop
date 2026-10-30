@@ -66,7 +66,7 @@ Each channel turns on when its variables exist (environment or macOS Keychain):
 |---|---|
 | Shopify | `SHOPIFY_TIENDA` (`mystore.myshopify.com`), `SHOPIFY_TOKEN` (custom app with `write_products`, `write_files`, `write_publications`) |
 | Meta catalog | `META_CATALOGO_ID`, `META_TOKEN` (system user with `catalog_management`) |
-| Instagram | `IG_USUARIO_ID`, `META_TOKEN` (with `instagram_content_publish`) |
+| Instagram | `IG_USUARIO_ID`, `META_TOKEN` (with `instagram_content_publish`; the system user needs the Facebook Page linked to the Instagram account). Optional `IG_TOKEN` overrides it with an Instagram Login token |
 
 Shopify publishes first, so the Meta catalog item can link to the product page and its CDN images.
 

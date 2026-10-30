@@ -9,7 +9,7 @@ import subprocess
 CANALES = {
     "shopify": ("SHOPIFY_TIENDA", "SHOPIFY_CLIENT_ID", "SHOPIFY_CLIENT_SECRET"),
     "catalogo_meta": ("META_CATALOGO_ID", "META_TOKEN"),
-    "instagram": ("IG_USUARIO_ID", "META_TOKEN"),
+    "instagram": ("IG_USUARIO_ID", "META_TOKEN"),  # IG_TOKEN, si existe, reemplaza a META_TOKEN
 }
 
 

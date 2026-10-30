@@ -339,7 +339,7 @@ class Servicio:
         catalogo = CatalogoMeta(secreto("META_CATALOGO_ID"), secreto("META_TOKEN"),
                                 secreto("SHOPIFY_DOMINIO_PUBLICO") or "", borrador=borrador) \
             if canal_conectado("catalogo_meta") else None
-        red = InstagramReels(secreto("IG_USUARIO_ID"), secreto("META_TOKEN")) \
+        red = InstagramReels(secreto("IG_USUARIO_ID"), secreto("IG_TOKEN") or secreto("META_TOKEN")) \
             if canal_conectado("instagram") else None
         gancho = (pr.estado.get("analisis") or {}).get("gancho", "")
         resultados = [asdict(r) for r in publicar(ficha, reel, None, canales, tienda, catalogo, red, gancho)]
