@@ -16,6 +16,7 @@ from camtoshop.adaptadores.archivos_marca import guardar_logo, guardar_pista
 from camtoshop.adaptadores.config import secreto
 from camtoshop.adaptadores.meta_oauth import url_de_login
 from camtoshop.adaptadores.sesion import firmar, verificar
+from camtoshop.dominio.agente_diario import texto_de_propuesta
 from camtoshop.dominio.comercio import Comercio, registrar_uso
 from camtoshop.dominio.marca import MUSICAS, validar_marca
 from camtoshop.dominio.portal import ErrorPortal, Portal
@@ -68,6 +69,10 @@ class EstiloDeReel(BaseModel):
     primario: str | None = Field(default=None, max_length=7)
     secundario: str | None = Field(default=None, max_length=7)
     musica: str | None = Field(default=None, max_length=20)
+
+
+class Pedido(BaseModel):
+    producto: str = Field(max_length=80)
 
 
 def _clave() -> str:
@@ -244,6 +249,30 @@ def rutas_del_portal(portal: Portal, repo, app_id: str, servicio) -> APIRouter:
         repo.guardar(c)
         pr = servicio.crear_desde_fotos([(f.filename, f.file) for f in fotos], texto.strip(), None, origen="portal",
                                         extra={"comercio_id": c.id})
+        return {"id": pr.id}
+
+    @r.get("/api/portal/propuesta")
+    def propuesta(idioma: str = "es", excluir: str = "", c: Comercio = Depends(comercio_actual)):
+        p = servicio.propuesta_para(c, tuple(x for x in excluir.split(",") if x)[:30])
+        if p is None:
+            return {}
+        return {"producto": p.producto.handle, "texto": texto_de_propuesta(p, "en" if idioma == "en" else "es")}
+
+    @r.post("/api/portal/propuesta")
+    def hacer_propuesta(datos: Pedido, c: Comercio = Depends(comercio_actual)):
+        p = servicio.propuesta_para(c)
+        pedido = p.pedido if p else ""
+        if servicio.reels_de_hoy() >= MAX_DIARIO:
+            raise HTTPException(429, "Camtoshop reached today's limit. Try again tomorrow.")
+        dia = time.strftime("%Y-%m-%d")
+        if not registrar_uso(c, dia):
+            raise HTTPException(429, "You reached today's limit of Reels")
+        try:
+            pr = servicio.reel_de_producto(c, datos.producto, "", pedido)
+        except RuntimeError:
+            raise HTTPException(400, "That product isn't available")
+        c.promovidos[datos.producto] = dia
+        repo.guardar(c)
         return {"id": pr.id}
 
     @r.post("/api/portal/reels/{reel_id}/publicar")

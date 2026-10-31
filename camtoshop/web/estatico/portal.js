@@ -11,6 +11,7 @@ const PISTAS = [{ id: "energia" }, { id: "calida" }, { id: "elegante" }, { id: "
 const ESCALA_PREVIA = { barlow: [46, 1], playfair: [30, 1.08], poppins: [28, 1.1], caveat: [40, .95] };
 const CLARO = "#F7F6F2", OSCURO = "#141414";
 
+let propuestaActual = null, descartados = [];
 let yo = null, reels = [], reelAbierto = null, elegidoReel = null, sondeo = null, audio = null, registrando = true;
 
 // --- Comunes ----------------------------------------------------------------------
@@ -156,6 +157,13 @@ async function cargarReels() {
   clearTimeout(cargarReels.espera);
   if (pendiente) cargarReels.espera = setTimeout(() => cargarReels().catch(() => {}), 6000);
   if (reelAbierto) { const r = reels.find(x => x.id === reelAbierto); if (r) pintarDetalle(r); }
+}
+
+async function cargarPropuesta() {
+  const p = await pedir(`/api/portal/propuesta?idioma=${idioma}&excluir=${encodeURIComponent(descartados.join(","))}`);
+  propuestaActual = p.producto || null;
+  $("propuesta").hidden = !propuestaActual;
+  if (propuestaActual) $("propuesta-texto").textContent = p.texto.replaceAll("*", "");
 }
 
 function grupo(titulo, opciones, clase, valor, alCambiar, armar) {
@@ -357,6 +365,15 @@ $("d-publicar").onclick = () => hacer(async () => {
   try { await pedir(`/api/portal/reels/${reelAbierto}/publicar`, "POST"); await cargarReels(); }
   finally { $("d-publicar").disabled = false; $("d-publicar").textContent = t("publicar_ig"); }
 });
+$("propuesta-hacer").onclick = () => hacer(async () => {
+  await pedir("/api/portal/propuesta", "POST", { producto: propuestaActual });
+  $("propuesta").hidden = true;
+  await cargarReels();
+});
+$("propuesta-otra").onclick = () => hacer(async () => {
+  descartados.push(propuestaActual);
+  await cargarPropuesta();
+});
 $("nuevo").onsubmit = ev => {
   ev.preventDefault();
   hacer(async () => {
@@ -376,13 +393,14 @@ $("d-aplicar").onclick = () => hacer(async () => {
 
 document.addEventListener("idioma", () => {
   if (!yo) { modo(registrando); return; }
-  pintar(yo); refrescarEstudio(); cargarReels().catch(() => {});
+  pintar(yo); refrescarEstudio(); cargarReels().catch(() => {}); cargarPropuesta().catch(() => {});
   if (reelAbierto) controles($("d-controles"), elegidoReel, (c, v) => { elegidoReel[c] = v; });
 });
 
 async function iniciar() {
   await cargarReels().catch(() => {});
   refrescarEstudio();
+  cargarPropuesta().catch(() => {});
   const vista = location.hash.slice(1);
   ir(["marca", "conexiones"].includes(vista) ? vista : "reels");
 }

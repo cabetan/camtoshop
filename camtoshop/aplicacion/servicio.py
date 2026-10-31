@@ -10,6 +10,7 @@ from __future__ import annotations
 import io
 import json
 import os
+import re
 import shutil
 import subprocess
 import threading
@@ -36,7 +37,7 @@ from camtoshop.adaptadores.render_fotos import RenderizadorFotos
 from camtoshop.adaptadores.repo_comercios import RepoComercios
 from camtoshop.adaptadores.sam_mascaras import mascaras
 from camtoshop.adaptadores.shopify import TiendaShopify, token_por_credenciales
-from camtoshop.dominio.agente_diario import Desempeno
+from camtoshop.dominio.agente_diario import Desempeno, Propuesta, proponer
 from camtoshop.dominio.anuncios import normalizar_anuncios
 from camtoshop.dominio.comercio import Comercio
 from camtoshop.dominio.direccion import LOOK_POR_DEFECTO, LOOKS, Propuesta, armar_plan, centros_de_zoom
@@ -242,14 +243,51 @@ class Servicio:
 
     def productos_de(self, comercio: Comercio) -> list[ProductoDeTienda]:
         tienda = self._destinos(comercio, True)[0]
-        return tienda.productos() if tienda else []
+        return tienda.productos() if tienda else [p for p, _ in self._productos_propios(comercio.id).values()]
+
+    def _productos_propios(self, comercio_id: str) -> dict[str, tuple[ProductoDeTienda, Proyecto]]:
+        """Sin tienda, los productos son los de sus Reels: por producto, el Reel más reciente."""
+        salida: dict[str, tuple[ProductoDeTienda, Proyecto]] = {}
+        for carpeta in sorted(self._datos.iterdir(), reverse=True):
+            if not (carpeta / "estado.json").exists():
+                continue
+            pr = Proyecto(carpeta)
+            e = pr.estado
+            nombre = (e.get("analisis") or {}).get("nombre", "")
+            if e.get("comercio_id") != comercio_id or e.get("tipo") != "fotos" or e.get("fase") != "listo" or not nombre:
+                continue
+            ficha = e.get("ficha")
+            precio = ficha_de_json(ficha).precio if ficha else None
+            handle = "-".join(re.findall(r"\w+", nombre.lower()))[:60]
+            texto = e.get("texto") or (f"{nombre}, {precio.texto()}" if precio else nombre)
+            salida.setdefault(handle, (ProductoDeTienda(handle, nombre, texto, precio, tuple(e["fotos_material"])), pr))
+        return salida
+
+    def promovidos_de(self, comercio: Comercio) -> dict[str, str]:
+        """Último día en que se promovió cada producto: lo que se pidió y lo que de verdad salió publicado."""
+        promovidos = dict(comercio.promovidos)
+        for handle, (_, pr) in self._productos_propios(comercio.id).items():
+            salidas = [x["t"] for x in pr.estado.get("publicaciones", []) if any(r["ok"] for r in x["resultados"])]
+            if salidas:
+                dia = time.strftime("%Y-%m-%d", time.localtime(max(salidas)))
+                promovidos[handle] = max(dia, promovidos.get(handle, ""))
+        return promovidos
+
+    def propuesta_para(self, comercio: Comercio, excluir: tuple[str, ...] = ()) -> Propuesta | None:
+        return proponer(self.productos_de(comercio), self.promovidos_de(comercio), self.desempeno_de(comercio),
+                        time.strftime("%Y-%m-%d"), excluir, comercio.demo)
 
     def reel_de_producto(self, comercio: Comercio, handle: str, celular: str, pedido: str) -> Proyecto:
+        extra = {"comercio_id": comercio.id, "pedido_guion": pedido, **({"celular": celular} if celular else {})}
+        propios = self._productos_propios(comercio.id)
+        if handle in propios:
+            producto, origen = propios[handle]
+            fotos = [(n, (origen.ruta("material") / n).open("rb")) for n in producto.imagenes]
+            return self.crear_desde_fotos(fotos, producto.descripcion, origen="reel", extra=extra)
         producto = next((p for p in self.productos_de(comercio) if p.handle == handle), None)
         if producto is None:
             raise RuntimeError("Ese producto ya no está en la tienda")
-        return self._reel_de_producto(producto, {"comercio_id": comercio.id, "celular": celular,
-                                                 "pedido_guion": pedido})
+        return self._reel_de_producto(producto, extra)
 
     def desempeno_de(self, comercio: Comercio) -> list[Desempeno]:
         """Resultados reales de los Reels recientes. Un Reel sin métricas todavía simplemente no cuenta."""

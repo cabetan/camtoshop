@@ -74,6 +74,10 @@ main { padding: 32px clamp(16px, 4vw, 56px) 72px; max-width: 1180px; width: 100%
 .campos input { background: var(--papel); }
 .nuevo .nota { margin-top: 12px; }
 
+.propuesta { margin-bottom: 20px; padding: 20px; border: 3px solid var(--tinta); border-radius: 4px; background: var(--sol); }
+.propuesta p { margin: 8px 0 16px; max-width: 42em; white-space: pre-line; }
+.botones { display: flex; flex-wrap: wrap; gap: 12px; }
+
 /* Reels */
 .rejilla { display: grid; grid-template-columns: repeat(auto-fill, minmax(190px, 1fr)); gap: 24px 20px; }
 .tarjeta { background: none; border: 0; padding: 0; text-align: left; cursor: pointer; font: inherit; color: inherit; }

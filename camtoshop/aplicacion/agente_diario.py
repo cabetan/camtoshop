@@ -13,7 +13,7 @@ from datetime import datetime
 from typing import Callable
 from zoneinfo import ZoneInfo
 
-from camtoshop.dominio.agente_diario import proponer, texto_de_propuesta
+from camtoshop.dominio.agente_diario import texto_de_propuesta
 from camtoshop.dominio.comercio import Comercio
 from camtoshop.dominio.conversacion import botones_de_propuesta
 
@@ -29,9 +29,7 @@ class AgenteDiario:
 
     def proponer_a(self, comercio: Comercio, excluir: tuple[str, ...] = ()) -> bool:
         """Manda la propuesta al primer celular del comercio. False si no hay nada que proponer."""
-        dia = datetime.now(ZONA).strftime("%Y-%m-%d")
-        propuesta = proponer(self._servicio.productos_de(comercio), comercio.promovidos,
-                             self._servicio.desempeno_de(comercio), dia, excluir, comercio.demo)
+        propuesta = self._servicio.propuesta_para(comercio, excluir)
         if propuesta is None:
             return False
         celular = comercio.celulares[0]
