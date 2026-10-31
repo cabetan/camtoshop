@@ -3,7 +3,10 @@
 # lo guarda en el llavero y en Secret Manager y reinicia el servicio. No lo muestra.
 P=camtoshop-app-df5f; R=us-central1
 cd "$(dirname "$0")/.."
-v=$(pbpaste); case "$v" in EAA*) ;; *) v=$(security find-generic-password -a "$USER" -s WA_TOKEN -w);; esac
+v=$(pbpaste); case "$v" in
+  EAA*) echo "origen: portapapeles";;
+  *) echo "origen: llavero (el portapapeles no trae un token)"; v=$(security find-generic-password -a "$USER" -s WA_TOKEN -w);;
+esac
 n=$(printf %s "$v" | .venv/bin/python -c "
 import sys, requests
 from camtoshop.adaptadores.config import secreto
@@ -14,8 +17,8 @@ r = requests.get('https://graph.facebook.com/v23.0/oauth/access_token', timeout=
 if not r.ok:
     sys.exit(r.json().get('error', {}).get('message', 'Meta rechazó el token'))
 print(r.json()['access_token'])
-")
-if [ -z "$n" ]; then echo "Meta no aceptó el token: genera uno nuevo, cópialo y repite."; exit 1; fi
+" 2>&1 | tail -1)
+case "$n" in EAA*) ;; *) echo "Meta respondió: $n"; exit 1;; esac
 security add-generic-password -U -a "$USER" -s WA_TOKEN -w "$n" && echo "llavero: ok"
 printf %s "$n" | gcloud secrets versions add WA_TOKEN --project $P --data-file=- >/dev/null 2>&1 && echo "nube: ok"
 unset v n; pbcopy < /dev/null
