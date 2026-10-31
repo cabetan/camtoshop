@@ -12,9 +12,12 @@ import wave
 from pathlib import Path
 
 import numpy as np
-import torch
-from torchaudio.functional import forced_align, merge_tokens
-from transformers import Wav2Vec2ForCTC, Wav2Vec2Processor
+try:  # solo el modo de video los usa; la imagen de la nube no los trae
+    import torch
+    from torchaudio.functional import forced_align, merge_tokens
+    from transformers import Wav2Vec2ForCTC, Wav2Vec2Processor
+except ImportError:
+    torch = None
 
 from camtoshop.dominio.reel import Palabra
 
