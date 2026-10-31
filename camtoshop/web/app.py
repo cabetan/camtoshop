@@ -40,7 +40,7 @@ META_APP_ID = "2033143300693121"
 portal = Portal(servicio.repo_comercios, MetaOAuth(META_APP_ID, secreto("META_APP_SECRET") or ""), ConectorShopify(),
                 time.time)
 app.include_router(rutas_del_portal(portal, servicio.repo_comercios, META_APP_ID, servicio))
-threading.Thread(target=servicio.recuperar, daemon=True).start()
+servicio.recuperar()  # antes de atender, para no tocar lo que esta instancia cree
 RUTAS_PUBLICAS = ("/webhook/", "/portal", "/api/portal", "/estatico/")
 
 
