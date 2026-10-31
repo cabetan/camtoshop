@@ -43,6 +43,8 @@ def mensajes_del_webhook(cuerpo: dict) -> list[tuple[str, str, str, Mensaje]]:
                     msg = Mensaje("texto", m["text"].get("body", ""))
                 elif tipo == "image":
                     msg = Mensaje("imagen", m["image"].get("caption", ""), m["image"]["id"])
+                elif tipo == "document" and m["document"].get("mime_type", "").startswith("image/"):
+                    msg = Mensaje("imagen", m["document"].get("caption", ""), m["document"]["id"])
                 elif tipo == "audio":
                     msg = Mensaje("audio", media=m["audio"]["id"])
                 elif tipo == "video":
@@ -52,6 +54,7 @@ def mensajes_del_webhook(cuerpo: dict) -> list[tuple[str, str, str, Mensaje]]:
                 elif tipo == "button":  # respuesta a botón de plantilla
                     msg = Mensaje("boton", boton=m["button"].get("payload", ""))
                 else:
+                    print(f"WhatsApp: mensaje sin atender, tipo {tipo}: {m.get('errors', '')}", flush=True)
                     msg = Mensaje("texto", "")
                 salida.append((celular, m.get("id", ""), nombres.get(celular, ""), msg))
     return salida
