@@ -78,6 +78,8 @@ class GuionistaSpark:
                         "including how the hook is written. " if pedido else "")
                      + (f"A reviewer found: {'; '.join(problemas)}. " if problemas else "")
                      + "Keep what was not asked to change.")
+        elif pedido:
+            tarea += f" The merchant asks: \"{pedido}\". This request overrides any style rule below, including how the hook is written."
         hechos = {k: getattr(analisis, k) for k in ("nombre", "marca", "categoria", "atributos", "texto_etiqueta")}
         d = json.loads(self._cliente.preguntar(MODELO, [
             ClienteMeta.parte_texto(f"{tarea} {REGLAS_GUION.format(idioma=idioma)}\n\n"
