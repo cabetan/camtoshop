@@ -22,7 +22,7 @@ TEXTOS = {
                      "cuánto vale.",
         "ayuda": "Mándame de 1 a 8 fotos de un producto y dime qué es y cuánto vale. Ejemplo: «Vela de soya, "
                  "lavanda, 85 mil». Si prefieres, cuéntamelo en una nota de voz.",
-        "que_es": "📸 ¡Buena foto! ¿Qué es y cuánto vale? (Puedes mandar más fotos o una nota de voz.)",
+        "que_es": "📸 ¡Buena foto! ¿Qué es y cuánto vale? (Puedes mandar más fotos de este producto o una nota de voz.)",
         "precio": "¿Y cuánto vale? Escríbelo en números, por ejemplo «85 mil».",
         "recibido": "¡Recibido! 🎬 En unos 3 minutos te mando el Reel para que lo apruebes.",
         "ocupado": "Sigo trabajando en tu Reel anterior; en cuanto esté te lo mando.",
@@ -43,7 +43,7 @@ TEXTOS = {
                      "and its price.",
         "ayuda": "Send me 1 to 8 photos of a product and tell me what it is and its price. Example: «Soy candle, "
                  "lavender, $25». A voice note works too.",
-        "que_es": "📸 Nice photo! What is it and how much is it? (You can send more photos or a voice note.)",
+        "que_es": "📸 Nice photo! What is it and how much is it? (You can send more photos of this product or a voice note.)",
         "precio": "And the price? Write it in numbers, e.g. «$25».",
         "recibido": "Got it! 🎬 In about 3 minutes I'll send you the Reel to approve.",
         "ocupado": "I'm still working on your previous Reel; I'll send it as soon as it's ready.",
