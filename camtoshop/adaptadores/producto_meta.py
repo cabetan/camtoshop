@@ -13,6 +13,7 @@ from camtoshop.dominio.producto import Analisis, Ficha, Texto, precio_valido
 
 RESPALDO_SAM = "object held in hands"
 NOMBRES_IDIOMA = {"es": "Spanish", "en": "English", "pt": "Portuguese", "fr": "French"}
+ORTOGRAFIA = "Use perfect spelling for each language, with every accent and special letter (á, é, í, ó, ú, ñ, ¿, ¡)."
 
 
 def copia_liviana(video: Path, destino: Path) -> Path:
@@ -156,8 +157,8 @@ class RedactorSpark:
         d = json.loads(self._cliente.preguntar("muse-spark-1.3", [ClienteMeta.parte_texto(
             "Write the online store listing for this product, in each requested language "
             f"({', '.join(NOMBRES_IDIOMA.get(i, i) for i in todos)}). Use only facts from the merchant's "
-            "words and the product data; never invent certifications, ingredients or numbers. Warm, clear, "
-            "persuasive, for a small independent shop.\n\n"
+            "words and the product data; never invent certifications, ingredients, numbers or facts about the "
+            "seller. Warm, clear and persuasive. " + ORTOGRAFIA + "\n\n"
             f"Product data: {json.dumps(hechos, ensure_ascii=False)}\n\nMerchant's words: {transcripcion}")],
             esquema=esquema))
         textos = {i: Texto(**d["textos"][i]) for i in todos}
@@ -196,7 +197,7 @@ class PublicistaMuse:
         d = json.loads(self._cliente.preguntar("muse-spark-1.3", [ClienteMeta.parte_texto(
             "Write three Meta ads (Instagram/Facebook) for this product, one per angle: 'beneficio' (main "
             "benefit), 'historia' (origin or who makes it), 'oferta' (price and urgency without lying). Language: "
-            f"{NOMBRES_IDIOMA.get(ficha.idioma, ficha.idioma)}. Only true claims from the listing.\n\n"
+            f"{NOMBRES_IDIOMA.get(ficha.idioma, ficha.idioma)}. Only true claims from the listing. {ORTOGRAFIA}\n\n"
             f"Listing: {t.titulo}. {t.descripcion} Points: {'; '.join(t.puntos)}. "
             f"Price: {ficha.precio.texto() if ficha.precio else 'not stated'}."),
             ClienteMeta.parte_imagen(foto)], esquema=ESQUEMA_ANUNCIOS))
