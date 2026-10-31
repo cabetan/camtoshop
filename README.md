@@ -1,5 +1,20 @@
 # Camtoshop
 
+**The AI community manager that lives in WhatsApp.** A merchant sends a product photo to one WhatsApp line. Minutes later the Reel comes back with **Publish / Change / Discard** buttons, and one tap posts it to *their own* Instagram. Every morning the agent suggests what to promote next, and it learns from the results of the merchant's real Reels.
+
+No app to learn, no filming, no editor: the merchant already knows how to use WhatsApp.
+
+## How a merchant uses it
+
+1. **Sign up** at the portal, connect Instagram + Facebook Page (and Shopify, if they have it) and link the phones they'll use: the portal gives a one-time code and the merchant sends it to the line, which proves the number is theirs.
+2. **Send a product**: 1–8 photos with what it is and the price, or a voice note. Camtoshop recognizes the merchant by phone number and asks only for what's missing.
+3. **Approve**: the Reel arrives in the chat. *Publish* is tied to that exact version; *Change* takes a plain-language request ("calmer", "another hook") and invalidates the old approval.
+4. **Every morning** the agent proposes the product that has gone longest without promotion. With enough data it compares hook styles on real Instagram results and applies the winner, and it says why. With too little data it draws no conclusion.
+
+**Trust is the product.** Nothing is published without the merchant's tap. Prices come only from the merchant or the store, never from the model. Unsupported promises are removed. AI scenes start from the real product cutout and are labeled as AI. Each merchant's tokens are encrypted, and webhooks without a valid Meta signature are rejected.
+
+## Beyond WhatsApp
+
 **From camera to shop.** A small merchant talks about a product on their phone, mistakes included. Camtoshop turns that one video into everything needed to sell it:
 
 - **An edited Reel**, directed by an AI agent. It removes failed takes and self-corrections, puts word-by-word captions where they never cover the product, adds giant text behind the speaker, product-in-use cutaways and an end card with the price. Then it **watches its own render and fixes it**.
@@ -57,6 +72,12 @@ camtoshop/
   web/           Thin FastAPI routes + a single-page UI (English / Spanish)
 tests/           Domain tests with fake adapters (no network, no credits)
 ```
+
+## What runs where
+
+The merchant flow (WhatsApp, photo and Shopify Reels, portal, daily agent) is deployed on **Cloud Run**, scaling to zero, with data on a Cloud Storage volume and Cloud Scheduler for the morning proposal. The talking-video pipeline needs local alignment models and runs in the local setup.
+
+During the hackathon the line uses Meta's WhatsApp test number, limited to 5 verified recipients, and the Meta app isn't reviewed yet, so only accounts with a role in the app can connect Instagram.
 
 ## Run it
 
