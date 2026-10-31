@@ -209,9 +209,10 @@ class RenderizadorFotos:
         elif cierre:
             texto, abajo = _capa_texto(toma.lineas, ALTO * 0.60, escala_texto, self._colores(), tipografia, sombra_texto)
             if nombre:
-                fuente = fuente_que_cabe(nombre.upper(), ruta_fuente, 70, ANCHO * 0.8)
+                corto = " ".join(nombre.split()[:4]).upper()  # el nombre completo puede no caber en una línea
+                fuente = fuente_que_cabe(corto, ruta_fuente, 70, ANCHO * 0.8)
                 d = ImageDraw.Draw(texto)
-                d.text(((ANCHO - fuente.getlength(nombre.upper())) / 2, abajo + 40), nombre.upper(),
+                d.text(((ANCHO - fuente.getlength(corto)) / 2, abajo + 40), corto,
                        font=fuente, fill=self._tema.texto)
             zona = (ALTO * 0.16, ALTO * 0.56)
         else:
