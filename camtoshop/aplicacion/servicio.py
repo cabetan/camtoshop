@@ -245,20 +245,23 @@ class Servicio:
         tienda = self._destinos(comercio, True)[0]
         return tienda.productos() if tienda else [p for p, _ in self._productos_propios(comercio.id).values()]
 
-    def _productos_propios(self, comercio_id: str) -> dict[str, tuple[ProductoDeTienda, Proyecto]]:
-        """Sin tienda, los productos son los de sus Reels: por producto, el Reel más reciente."""
-        salida: dict[str, tuple[ProductoDeTienda, Proyecto]] = {}
+    def _reels_listos(self, comercio_id: str):
+        """(producto, nombre, proyecto) de cada Reel terminado del comercio, del más nuevo al más viejo."""
         for carpeta in sorted(self._datos.iterdir(), reverse=True):
             if not (carpeta / "estado.json").exists():
                 continue
             pr = Proyecto(carpeta)
             e = pr.estado
             nombre = (e.get("analisis") or {}).get("nombre", "")
-            if e.get("comercio_id") != comercio_id or e.get("tipo") != "fotos" or e.get("fase") != "listo" or not nombre:
-                continue
-            ficha = e.get("ficha")
-            precio = ficha_de_json(ficha).precio if ficha else None
-            handle = "-".join(re.findall(r"\w+", nombre.lower())[:3])  # Muse Spark varía el final del nombre
+            if e.get("comercio_id") == comercio_id and e.get("tipo") == "fotos" and e.get("fase") == "listo" and nombre:
+                yield "-".join(re.findall(r"\w+", nombre.lower())[:3]), nombre, pr  # Muse Spark varía el final del nombre
+
+    def _productos_propios(self, comercio_id: str) -> dict[str, tuple[ProductoDeTienda, Proyecto]]:
+        """Sin tienda, los productos son los de sus Reels: por producto, el Reel más reciente."""
+        salida: dict[str, tuple[ProductoDeTienda, Proyecto]] = {}
+        for handle, nombre, pr in self._reels_listos(comercio_id):
+            e = pr.estado
+            precio = ficha_de_json(e["ficha"]).precio if e.get("ficha") else None
             texto = e.get("texto") or (f"{nombre}, {precio.texto()}" if precio else nombre)
             salida.setdefault(handle, (ProductoDeTienda(handle, nombre, texto, precio, tuple(e["fotos_material"])), pr))
         return salida
@@ -266,7 +269,7 @@ class Servicio:
     def promovidos_de(self, comercio: Comercio) -> dict[str, str]:
         """Último día en que se promovió cada producto: lo que se pidió y lo que de verdad salió publicado."""
         promovidos = dict(comercio.promovidos)
-        for handle, (_, pr) in self._productos_propios(comercio.id).items():
+        for handle, _, pr in self._reels_listos(comercio.id):
             salidas = [x["t"] for x in pr.estado.get("publicaciones", []) if any(r["ok"] for r in x["resultados"])]
             if salidas:
                 dia = time.strftime("%Y-%m-%d", time.localtime(max(salidas)))
