@@ -14,11 +14,12 @@ from collections import OrderedDict, defaultdict
 
 from camtoshop.adaptadores.config import secreto
 from camtoshop.adaptadores.whatsapp import ClienteWhatsApp, mensajes_del_webhook
+from camtoshop.aplicacion.agente_diario import AgenteDiario
 from camtoshop.aplicacion.servicio import Proyecto, Servicio
 from camtoshop.dominio.comercio import comercio_de, vincular
 from camtoshop.dominio.conversacion import (
-    CrearDesdeFotos, CrearDesdeVideo, Mensaje, PedirCambio, Publicar, Responder, atender, botones, fallo,
-    listo_para_aprobar, t,
+    CrearDesdeFotos, CrearDesdeProducto, CrearDesdeVideo, Mensaje, OtraPropuesta, PedirCambio, Publicar, Responder,
+    atender, botones, fallo, listo_para_aprobar, t,
 )
 
 NOMBRES_CANAL = {"shopify": "Shopify", "catalogo_meta": "Catálogo de Meta", "instagram": "Instagram"}
@@ -37,6 +38,7 @@ class AgenteWhatsApp:
         self._vistos: OrderedDict[str, None] = OrderedDict()
         self._cerrojos: defaultdict[str, threading.Lock] = defaultdict(threading.Lock)
         self._wa = None
+        self.diario = AgenteDiario(servicio, lambda: self.wa)
         Proyecto.al_terminar = self.proyecto_terminado
 
     @property
@@ -76,8 +78,15 @@ class AgenteWhatsApp:
         acciones = atender(chat, msg, comercio, time.strftime("%Y-%m-%d"))
         self._repo.guardar(comercio)
         self._repo.guardar_chat(chat)
-        for accion in acciones:
-            self._ejecutar(accion, celular, comercio)
+        try:
+            for accion in acciones:
+                self._ejecutar(accion, celular, comercio)
+        except Exception as e:  # sin esto el chat quedaría en «generando» para siempre
+            traceback.print_exc()
+            chat = self._repo.chat(celular)
+            fallo(chat)
+            self._repo.guardar_chat(chat)
+            self.wa.texto(celular, t(comercio, "error", error=str(e)[:200]))
 
     def _ejecutar(self, accion, celular: str, comercio):
         if isinstance(accion, Responder):
@@ -94,6 +103,11 @@ class AgenteWhatsApp:
             pr = self._servicio.crear(video.name, video.open("rb"),
                                       extra={"comercio_id": comercio.id, "celular": celular})
             self._anotar(celular, pr)
+        elif isinstance(accion, CrearDesdeProducto):
+            self._anotar(celular, self._servicio.reel_de_producto(comercio, accion.producto, celular, accion.pedido))
+        elif isinstance(accion, OtraPropuesta):
+            if not self.diario.proponer_a(comercio, excluir=(accion.producto,)):
+                self.wa.texto(celular, t(comercio, "sin_otro"))
         elif isinstance(accion, Publicar):
             pr = self._servicio.obtener(accion.proyecto)
             canales = [k for k, v in self._servicio.canales_de(comercio).items() if v]

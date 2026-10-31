@@ -36,6 +36,7 @@ from camtoshop.adaptadores.render_fotos import RenderizadorFotos
 from camtoshop.adaptadores.repo_comercios import RepoComercios
 from camtoshop.adaptadores.sam_mascaras import mascaras
 from camtoshop.adaptadores.shopify import TiendaShopify, token_por_credenciales
+from camtoshop.dominio.agente_diario import Desempeno
 from camtoshop.dominio.anuncios import normalizar_anuncios
 from camtoshop.dominio.comercio import Comercio
 from camtoshop.dominio.direccion import LOOK_POR_DEFECTO, LOOKS, Propuesta, armar_plan, centros_de_zoom
@@ -220,17 +221,45 @@ class Servicio:
     def reels_desde_tienda(self, handles: list[str]) -> list[str]:
         """Un proyecto por producto elegido (máximo 6). Cada Reel queda para aprobar, nada se publica solo."""
         elegidos = [p for p in self._tienda().productos() if p.handle in set(handles)]
-        ids = []
-        for producto in elegir_para_reel(elegidos, incluir_borradores=True):
-            fotos = []
-            for n, url in enumerate(producto.imagenes[:6]):
-                r = requests.get(url, timeout=60)
-                r.raise_for_status()
-                fotos.append((f"tienda_{n + 1}.jpg", io.BytesIO(r.content)))
-            pr = self.crear_desde_fotos(fotos, mensaje_desde_tienda(producto), origen="shopify")
-            pr.guardar(handle_tienda=producto.handle, nombre_archivo=producto.titulo)
-            ids.append(pr.id)
-        return ids
+        return [self._reel_de_producto(p).id for p in elegir_para_reel(elegidos, incluir_borradores=True)]
+
+    def _reel_de_producto(self, producto: ProductoDeTienda, extra: dict | None = None) -> Proyecto:
+        fotos = []
+        for n, url in enumerate(producto.imagenes[:6]):
+            r = requests.get(url, timeout=60)
+            r.raise_for_status()
+            fotos.append((f"tienda_{n + 1}.jpg", io.BytesIO(r.content)))
+        pr = self.crear_desde_fotos(fotos, mensaje_desde_tienda(producto), origen="shopify", extra=extra)
+        pr.guardar(handle_tienda=producto.handle, nombre_archivo=producto.titulo)
+        return pr
+
+    # --- Lo que necesita el agente diario ---------------------------------------------
+
+    def productos_de(self, comercio: Comercio) -> list[ProductoDeTienda]:
+        tienda = self._destinos(comercio, True)[0]
+        return tienda.productos() if tienda else []
+
+    def reel_de_producto(self, comercio: Comercio, handle: str, celular: str, pedido: str) -> Proyecto:
+        producto = next((p for p in self.productos_de(comercio) if p.handle == handle), None)
+        if producto is None:
+            raise RuntimeError("Ese producto ya no está en la tienda")
+        return self._reel_de_producto(producto, {"comercio_id": comercio.id, "celular": celular,
+                                                 "pedido_guion": pedido})
+
+    def desempeno_de(self, comercio: Comercio) -> list[Desempeno]:
+        """Resultados reales de los Reels recientes. Un Reel sin métricas todavía simplemente no cuenta."""
+        red = self._destinos(comercio, True)[2]
+        if red is None:
+            return []
+        salida = []
+        for reel in red.reels_recientes():
+            try:
+                m = red.metricas(reel["id"])
+            except RuntimeError:
+                continue
+            salida.append(Desempeno((reel.get("caption") or "").split("\n")[0], m.get("reach", 0), m.get("likes", 0),
+                                    m.get("comments", 0), m.get("shares", 0), m.get("saved", 0)))
+        return salida
 
     def obtener(self, identificador: str) -> Proyecto | None:
         carpeta = self._datos / identificador
@@ -355,7 +384,7 @@ class Servicio:
 
             r = reel_desde_fotos(analisis, texto, fotos, recortes, ficha.precio, voz, duracion_voz,
                                  pr.ruta("reel_fotos.mp4"), self._puertos_fotos(pr, analisis),
-                                 lambda t: pr.paso(t), rondas=1)
+                                 lambda t: pr.paso(t), pedido=pr.estado.get("pedido_guion", ""), rondas=1)
             self._guardar_reel_fotos(pr, r)
             self._anuncios(pr, ficha, catalogo[0])
             pr.guardar(fase="listo", progreso=100)

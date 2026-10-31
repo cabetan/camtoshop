@@ -126,6 +126,12 @@ class InstagramReels:
             time.sleep(5)
         raise RuntimeError("Instagram tardó demasiado en procesar el video.")
 
+    def reels_recientes(self, limite: int = 12) -> list[dict]:
+        r = _revisar(requests.get(f"{self._graph}/{self._usuario}/media", timeout=30, params={
+            "fields": "id,caption,media_product_type", "limit": limite, "access_token": self._token,
+        }), "Instagram (publicaciones)")
+        return [m for m in r.get("data", []) if m.get("media_product_type") == "REELS"]
+
     def metricas(self, media_id: str) -> dict:
         r = _revisar(requests.get(f"{self._graph}/{media_id}/insights", timeout=30, params={
             "metric": "views,reach,likes,comments,shares,saved", "access_token": self._token,

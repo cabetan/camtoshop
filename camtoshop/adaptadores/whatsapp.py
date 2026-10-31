@@ -111,6 +111,14 @@ class ClienteWhatsApp:
                                    for i, titulo in botones[:3]]},
         }})
 
+    def texto_con_botones(self, para: str, cuerpo: str, botones: list[tuple[str, str]]) -> str:
+        return self._enviar(para, {"type": "interactive", "interactive": {
+            "type": "button",
+            "body": {"text": cuerpo[:1024]},
+            "action": {"buttons": [{"type": "reply", "reply": {"id": i[:256], "title": titulo[:20]}}
+                                   for i, titulo in botones[:3]]},
+        }})
+
     def descargar(self, media_id: str, carpeta: Path | None = None) -> Path:
         """Baja un archivo recibido. La URL de Meta vence en 5 minutos: se baja de inmediato."""
         info = self._revisar(self._sesion.get(f"{GRAPH}/{media_id}", timeout=30), "archivo")

@@ -40,6 +40,8 @@ class Comercio:
     codigos: dict[str, float] = field(default_factory=dict)  # código → vence (epoch)
     conexiones: Conexiones = field(default_factory=Conexiones)
     usos: dict[str, int] = field(default_factory=dict)  # "AAAA-MM-DD" → Reels pedidos
+    promovidos: dict[str, str] = field(default_factory=dict)  # producto → último día que se promovió
+    ultima_propuesta: str = ""  # día de la última propuesta del agente diario
     idioma: str = "es"
     demo: bool = False  # la cuenta propia de Camtoshop: publica con las credenciales del servidor
 

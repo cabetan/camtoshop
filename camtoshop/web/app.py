@@ -32,6 +32,7 @@ MAX_FOTOS = 8
 app = FastAPI(title="Camtoshop")
 servicio = Servicio()
 agente = AgenteWhatsApp(servicio)
+agente.diario.arrancar()
 META_APP_ID = "2033143300693121"
 portal = Portal(servicio.repo_comercios, MetaOAuth(META_APP_ID, secreto("META_APP_SECRET") or ""), ConectorShopify(),
                 time.time)

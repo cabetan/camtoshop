@@ -33,6 +33,8 @@ TEXTOS = {
         "publicando": "Publicando… 🚀",
         "descartado": "Listo, lo descarté. Cuando quieras, mándame otro producto.",
         "error": "Uy, algo falló creando tu Reel: {error}. ¿Lo intentamos otra vez con otras fotos?",
+        "hoy_no": "Listo, hoy descansamos. Mañana te propongo otra cosa ☀️",
+        "sin_otro": "No tengo otro producto para proponerte hoy. Mándame una foto y hacemos uno nuevo.",
     },
     "en": {
         "desconocido": "Hi! I'm Camtoshop 📸 To turn your photos into content, sign up at {portal} and link this "
@@ -52,9 +54,12 @@ TEXTOS = {
         "publicando": "Publishing… 🚀",
         "descartado": "Done, discarded. Send me another product whenever you like.",
         "error": "Oops, something failed while making your Reel: {error}. Shall we try again with other photos?",
+        "hoy_no": "Sure, we'll rest today. I'll suggest something else tomorrow ☀️",
+        "sin_otro": "I don't have another product to suggest today. Send me a photo and we'll make a new one.",
     },
 }
 BOTONES = {"es": ("Publicar", "Cambiar", "Descartar"), "en": ("Publish", "Change", "Discard")}
+BOTONES_PROPUESTA = {"es": ("Hazlo", "Otro producto", "Hoy no"), "en": ("Make it", "Another one", "Not today")}
 
 
 @dataclass
@@ -75,6 +80,8 @@ class Chat:
     estado: str = ""  # "" | datos | generando | aprobacion | cambio
     proyecto: str = ""
     version: str = ""
+    propuesta: str = ""  # producto que el agente diario propuso y sigue sin respuesta
+    pedido_propuesta: str = ""  # lo aprendido de las métricas, para el guion de ese Reel
 
 
 @dataclass(frozen=True)
@@ -93,6 +100,17 @@ class CrearDesdeFotos:
 class CrearDesdeVideo:
     video: str
     texto: str
+
+
+@dataclass(frozen=True)
+class CrearDesdeProducto:
+    producto: str
+    pedido: str
+
+
+@dataclass(frozen=True)
+class OtraPropuesta:
+    producto: str
 
 
 @dataclass(frozen=True)
@@ -121,6 +139,28 @@ def botones(comercio: Comercio, proyecto: str, version: str) -> list[tuple[str, 
     return [(boton_id(a, proyecto, version), titulo) for a, titulo in zip(("publicar", "cambiar", "descartar"), titulos)]
 
 
+def botones_de_propuesta(comercio: Comercio, producto: str) -> list[tuple[str, str]]:
+    titulos = BOTONES_PROPUESTA.get(comercio.idioma, BOTONES_PROPUESTA["es"])
+    return [(boton_id(a, producto, ""), titulo) for a, titulo in zip(("hazlo", "otro", "hoy_no"), titulos)]
+
+
+def _responder_propuesta(chat: Chat, accion: str, producto: str, comercio: Comercio, dia: str) -> list:
+    if producto != chat.propuesta:
+        return [Responder(t(comercio, "otra_version"))]
+    if chat.estado == "generando":
+        return [Responder(t(comercio, "ocupado"))]
+    if accion == "otro":
+        return [OtraPropuesta(producto)]
+    pedido, chat.propuesta, chat.pedido_propuesta = chat.pedido_propuesta, "", ""
+    if accion == "hoy_no":
+        return [Responder(t(comercio, "hoy_no"))]
+    if not registrar_uso(comercio, dia):
+        return [Responder(t(comercio, "limite", n=comercio.usos.get(dia, 0)))]
+    comercio.promovidos[producto] = dia
+    chat.estado = "generando"
+    return [CrearDesdeProducto(producto, pedido), Responder(t(comercio, "recibido"))]
+
+
 def _arrancar(chat: Chat, comercio: Comercio, dia: str) -> list:
     if not registrar_uso(comercio, dia):
         chat.fotos, chat.voz, chat.texto, chat.preguntas, chat.estado = [], "", "", 0, ""
@@ -134,6 +174,8 @@ def atender(chat: Chat, msg: Mensaje, comercio: Comercio, dia: str) -> list:
     """Decide qué hacer con un mensaje de un comercio registrado. Modifica `chat`."""
     if msg.tipo == "boton":
         accion, proyecto, version = (msg.boton.split("|") + ["", "", ""])[:3]
+        if accion in {"hazlo", "otro", "hoy_no"}:
+            return _responder_propuesta(chat, accion, proyecto, comercio, dia)
         if proyecto != chat.proyecto or version != chat.version or chat.estado != "aprobacion":
             return [Responder(t(comercio, "otra_version"))]
         if accion == "publicar":
