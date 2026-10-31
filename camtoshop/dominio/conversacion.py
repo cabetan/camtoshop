@@ -180,7 +180,7 @@ def atender(chat: Chat, msg: Mensaje, comercio: Comercio, dia: str) -> list:
             return [Responder(t(comercio, "otra_version"))]
         if accion == "publicar":
             chat.estado = ""
-            return [Publicar(proyecto), Responder(t(comercio, "publicando"))]
+            return [Responder(t(comercio, "publicando")), Publicar(proyecto)]
         if accion == "cambiar":
             chat.estado = "cambio"
             return [Responder(t(comercio, "cual_cambio"))]

@@ -85,7 +85,7 @@ def test_publicar_solo_con_la_version_vigente():
     viejo = atender(chat, Mensaje("boton", boton="publicar|p1|v1"), c, DIA)
     assert tipos(viejo) == ["Responder"] and chat.estado == "aprobacion"
     ids = [i for i, _ in botones(c, "p1", "v2")]
-    assert atender(chat, Mensaje("boton", boton=ids[0]), c, DIA)[0] == Publicar("p1")
+    assert atender(chat, Mensaje("boton", boton=ids[0]), c, DIA)[1] == Publicar("p1")
     assert tipos(atender(chat, Mensaje("boton", boton=ids[0]), c, DIA)) == ["Responder"]  # no publica dos veces
 
 
