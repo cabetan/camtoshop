@@ -62,15 +62,15 @@ class AgenteWhatsApp:
 
     def _atender(self, celular: str, msg: Mensaje):
         comercios = self._repo.todos()
+        vinculado = vincular(comercios, celular, msg.texto, time.time())  # también si el número ya era de otro
+        if vinculado:
+            for c in comercios:
+                self._repo.guardar(c)
+            self.wa.texto(celular, t(vinculado, "vinculado", nombre=vinculado.nombre))
+            return
         comercio = comercio_de(celular, comercios)
         if comercio is None:
-            vinculado = vincular(comercios, celular, msg.texto, time.time())
-            if vinculado:
-                for c in comercios:
-                    self._repo.guardar(c)
-                self.wa.texto(celular, t(vinculado, "vinculado", nombre=vinculado.nombre))
-            else:
-                self.wa.texto(celular, t(None, "desconocido", portal=self._portal))
+            self.wa.texto(celular, t(None, "desconocido", portal=self._portal))
             return
         chat = self._repo.chat(celular)
         acciones = atender(chat, msg, comercio, time.strftime("%Y-%m-%d"))

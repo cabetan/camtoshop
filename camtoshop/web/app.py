@@ -6,17 +6,22 @@ from pathlib import Path
 from typing import Literal
 
 import threading
+import time
 
 from fastapi import FastAPI, File, Form, HTTPException, Request, UploadFile
-from fastapi.responses import FileResponse, PlainTextResponse
+from fastapi.responses import FileResponse, JSONResponse, PlainTextResponse
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, Field
 
 from camtoshop.adaptadores.config import secreto
+from camtoshop.adaptadores.meta_oauth import MetaOAuth
+from camtoshop.adaptadores.shopify import ConectorShopify
 from camtoshop.adaptadores.whatsapp import firma_valida
 from camtoshop.aplicacion.agente_whatsapp import AgenteWhatsApp
 from camtoshop.aplicacion.servicio import Proyecto, Servicio
 from camtoshop.dominio.direccion import LOOKS
+from camtoshop.dominio.portal import Portal
+from camtoshop.web.portal import rutas_del_portal
 
 ESTATICO = Path(__file__).parent / "estatico"
 FORMATOS_VIDEO = {".mov", ".mp4", ".m4v"}
@@ -27,6 +32,23 @@ MAX_FOTOS = 8
 app = FastAPI(title="Camtoshop")
 servicio = Servicio()
 agente = AgenteWhatsApp(servicio)
+META_APP_ID = "2033143300693121"
+portal = Portal(servicio.repo_comercios, MetaOAuth(META_APP_ID, secreto("META_APP_SECRET") or ""), ConectorShopify(),
+                time.time)
+app.include_router(rutas_del_portal(portal, servicio.repo_comercios, META_APP_ID))
+RUTAS_PUBLICAS = ("/webhook/", "/portal", "/api/portal", "/estatico/")
+
+
+def llega_de_internet(cabeceras) -> bool:
+    return "cf-connected-ip" in cabeceras or "x-forwarded-for" in cabeceras
+
+
+@app.middleware("http")
+async def solo_lo_publico(request: Request, siguiente):
+    """Por el túnel solo se ve el portal y el webhook: el resto puede gastar créditos y publicar."""
+    if llega_de_internet(request.headers) and not request.url.path.startswith(RUTAS_PUBLICAS):
+        return JSONResponse({"detail": "Not found"}, 404)
+    return await siguiente(request)
 
 
 def _proyecto(identificador: str) -> Proyecto:

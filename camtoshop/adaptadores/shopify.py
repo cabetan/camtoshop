@@ -19,6 +19,7 @@ from pathlib import Path
 
 import requests
 
+from camtoshop.dominio.portal import ErrorPortal
 from camtoshop.dominio.producto import Ficha, ProductoDeTienda, precio_valido, texto_plano
 from camtoshop.dominio.publicacion import EnTienda
 
@@ -33,6 +34,16 @@ def token_por_credenciales(tienda: str, cliente_id: str, secreto: str) -> str:
     if not r.ok:
         raise RuntimeError(f"Shopify no entregó el token ({r.status_code}): {r.text[:200]}")
     return r.json()["access_token"]
+
+
+class ConectorShopify:
+    """Comprueba que el token de un comercio abre su tienda."""
+
+    def nombre(self, tienda: str, token: str) -> str:
+        try:
+            return TiendaShopify(tienda, token).nombre()
+        except (RuntimeError, requests.RequestException):
+            raise ErrorPortal("Shopify didn't accept that store and token") from None
 
 
 class TiendaShopify:
@@ -58,6 +69,9 @@ class TiendaShopify:
             raise RuntimeError("Shopify: " + "; ".join(e["message"] for e in resultado["userErrors"]))
 
     # --- Lectura: la tienda como origen --------------------------------------
+
+    def nombre(self) -> str:
+        return self._gql("{ shop { name } }")["shop"]["name"]
 
     def productos(self, maximo: int = 50) -> list[ProductoDeTienda]:
         """Productos de la tienda (más recientes primero) con sus fotos y precio."""
