@@ -11,7 +11,7 @@ import threading
 import time
 
 from fastapi import FastAPI, File, Form, HTTPException, Request, UploadFile
-from fastapi.responses import FileResponse, JSONResponse, PlainTextResponse
+from fastapi.responses import FileResponse, JSONResponse, PlainTextResponse, RedirectResponse
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, Field
 
@@ -50,6 +50,8 @@ def llega_de_internet(cabeceras) -> bool:
 @app.middleware("http")
 async def solo_lo_publico(request: Request, siguiente):
     """Por el túnel solo se ve el portal y el webhook: el resto puede gastar créditos y publicar."""
+    if llega_de_internet(request.headers) and request.url.path == "/":
+        return RedirectResponse("/portal", 302)
     if llega_de_internet(request.headers) and not request.url.path.startswith(RUTAS_PUBLICAS):
         return JSONResponse({"detail": "Not found"}, 404)
     return await siguiente(request)
