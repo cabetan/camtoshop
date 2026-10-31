@@ -25,7 +25,7 @@ No app to learn, no filming, no editor: the merchant already knows how to use Wh
 
 **No video? No problem.** Camtoshop also builds the Reel from **a few photos** (plus a short message and, optionally, a voice note) or **straight from the products already in a Shopify store**: SAM 3.1 cuts out the real product, Muse Spark writes the script, Muse Image places the *same* product in a lifestyle scene, and the product moves in layers over its own photo with giant text behind it. Nobody has to film anything.
 
-Built solo for the Meta Global AI Developer Hackathon (Oct 27 – Nov 4, 2026), Startup track. **All code in this repository was written during the hackathon**; see the commit history.
+Built solo for the Meta Global AI Developer Hackathon (Oct 27 – Nov 4, 2026), Indie Developer track. **All code in this repository was written during the hackathon**; see the commit history.
 
 ## Meta models, and what each one does
 
