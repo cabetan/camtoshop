@@ -37,3 +37,10 @@ def test_lo_publicado_cuenta_como_promovido(tmp_path):
     s, raiz = montar(tmp_path)
     proyecto(raiz, "20261031-a", publicado=1793000000)
     assert "vela-de-soya" in s.promovidos_de(Comercio("c1", "Velas", "a@b.co"))
+
+
+def test_variantes_del_nombre_son_el_mismo_producto(tmp_path):
+    s, raiz = montar(tmp_path)
+    proyecto(raiz, "20261031-a", titulo="Florero de cerámica verde con ramas de flores")
+    proyecto(raiz, "20261031-b", titulo="Florero de cerámica verde")
+    assert list(s._productos_propios("c1")) == ["florero-de-cerámica"]

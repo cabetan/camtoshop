@@ -258,7 +258,7 @@ class Servicio:
                 continue
             ficha = e.get("ficha")
             precio = ficha_de_json(ficha).precio if ficha else None
-            handle = "-".join(re.findall(r"\w+", nombre.lower()))[:60]
+            handle = "-".join(re.findall(r"\w+", nombre.lower())[:3])  # Muse Spark varía el final del nombre
             texto = e.get("texto") or (f"{nombre}, {precio.texto()}" if precio else nombre)
             salida.setdefault(handle, (ProductoDeTienda(handle, nombre, texto, precio, tuple(e["fotos_material"])), pr))
         return salida
