@@ -14,7 +14,7 @@ r = requests.get('https://graph.facebook.com/v23.0/oauth/access_token', timeout=
 if not r.ok:
     sys.exit(r.json().get('error', {}).get('message', 'Meta rechazó el token'))
 print(r.json()['access_token'])
-" 2>/dev/null)
+")
 if [ -z "$n" ]; then echo "Meta no aceptó el token: genera uno nuevo, cópialo y repite."; exit 1; fi
 security add-generic-password -U -a "$USER" -s WA_TOKEN -w "$n" && echo "llavero: ok"
 printf %s "$n" | gcloud secrets versions add WA_TOKEN --project $P --data-file=- >/dev/null 2>&1 && echo "nube: ok"
