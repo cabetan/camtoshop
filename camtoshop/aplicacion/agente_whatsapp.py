@@ -35,7 +35,7 @@ class AgenteWhatsApp:
     def __init__(self, servicio: Servicio, portal: str = ""):
         self._servicio = servicio
         self._repo = servicio.repo_comercios
-        self._portal = portal or secreto("CAMTOSHOP_URL_PUBLICA") or "camtoshop.app"
+        self._portal = portal or secreto("CAMTOSHOP_URL_PUBLICA") or "camtoshop.com/portal"
         self._vistos: OrderedDict[str, None] = OrderedDict()
         self._cerrojos: defaultdict[str, threading.Lock] = defaultdict(threading.Lock)
         self._wa = None
