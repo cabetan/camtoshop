@@ -59,10 +59,19 @@
         <a class="principal" id="hacer-reel" target="_blank" rel="noopener">Make a Reel on WhatsApp</a>
       </div>
       <div id="pasos" class="pasos" hidden></div>
+      <form id="nuevo" class="nuevo">
+        <h2>Make a Reel here</h2>
+        <div class="campos">
+          <div><label for="nuevo-fotos">Photos of one product</label><input id="nuevo-fotos" type="file" accept="image/jpeg,image/png,image/webp" multiple required></div>
+          <div><label for="nuevo-texto">What is it and what does it cost?</label><input id="nuevo-texto" maxlength="500" required placeholder="Soy candle, lavender scent, $25"></div>
+          <button class="principal">Make my Reel</button>
+        </div>
+        <p class="nota">Takes about four minutes. It uses your brand settings, and nothing is published until you approve it.</p>
+      </form>
       <div id="reels" class="rejilla"></div>
       <div id="sin-reels" class="vacio" hidden>
         <h2>Your first Reel starts with one photo</h2>
-        <p>Send a product photo to Camtoshop on WhatsApp and say what it is and what it costs. The Reel appears here in about four minutes.</p>
+        <p>Upload a product photo above, or send it to Camtoshop on WhatsApp. The Reel appears here in about four minutes.</p>
       </div>
     </section>
 
@@ -75,8 +84,9 @@
           <p id="d-estado" class="nota"></p>
           <div id="d-publicado"></div>
           <div id="d-controles"></div>
+          <button class="secundario ancho" id="d-publicar" hidden>Publish to Instagram</button>
           <button class="principal ancho" id="d-aplicar">Render this version</button>
-          <p class="nota">Takes about a minute. The new version goes to your WhatsApp for approval.</p>
+          <p class="nota">Takes about a minute. Nothing is published until you approve it.</p>
         </div>
       </div>
     </section>
@@ -122,7 +132,7 @@
       <div class="conexion">
         <div>
           <h2>WhatsApp phones</h2>
-          <p class="nota">Everyone who sends products or approves Reels needs their phone here.</p>
+          <p class="nota">Link a phone to make and approve Reels from WhatsApp. While Camtoshop is in preview, the line only answers approved numbers. You can always make Reels in this portal.</p>
           <div id="celulares"></div>
           <div id="codigo" hidden>
             <p class="nota">Send this code to Camtoshop from the phone you'll use. It works for 30 minutes.</p>

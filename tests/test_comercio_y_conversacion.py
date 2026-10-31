@@ -22,7 +22,7 @@ def test_normalizar_celular_colombiano():
 def test_vincular_con_codigo_vigente_y_solo_una_vez():
     a, b = comercio(), Comercio("c2", "Otro", "x@y.co", celulares=["573001234567"])
     codigo = nuevo_codigo(a, ahora=1000)
-    assert codigo.startswith("CAMTO-") and codigo_en(f"hola {codigo.lower()}") == codigo[-4:]
+    assert codigo.startswith("CAMTO-") and codigo_en(f"hola {codigo.lower()}") == codigo[-6:]
     assert vincular([a, b], "573001234567", codigo, ahora=1100) is a
     assert comercio_de("573001234567", [a, b]) is a and b.celulares == []  # se mueve al nuevo dueño
     assert vincular([a, b], "573001234567", codigo, ahora=1200) is None  # el código se usa una vez
@@ -85,7 +85,7 @@ def test_publicar_solo_con_la_version_vigente():
     viejo = atender(chat, Mensaje("boton", boton="publicar|p1|v1"), c, DIA)
     assert tipos(viejo) == ["Responder"] and chat.estado == "aprobacion"
     ids = [i for i, _ in botones(c, "p1", "v2")]
-    assert atender(chat, Mensaje("boton", boton=ids[0]), c, DIA)[1] == Publicar("p1")
+    assert atender(chat, Mensaje("boton", boton=ids[0]), c, DIA)[1] == Publicar("p1", "v2")
     assert tipos(atender(chat, Mensaje("boton", boton=ids[0]), c, DIA)) == ["Responder"]  # no publica dos veces
 
 
@@ -104,3 +104,10 @@ def test_video_crea_proyecto_de_video():
 def test_respuestas_en_ingles_si_el_comercio_es_en_ingles():
     acciones = atender(Chat("1201"), Mensaje("texto", "hi"), comercio(idioma="en"), DIA)
     assert isinstance(acciones[0], Responder) and acciones[0].texto.startswith("Send me")
+
+
+def test_nuevo_codigo_reemplaza_al_anterior():
+    a = comercio()
+    viejo, nuevo = nuevo_codigo(a, ahora=0), nuevo_codigo(a, ahora=1)
+    assert len(a.codigos) == 1 and codigo_en(nuevo) in a.codigos
+    assert viejo == nuevo or vincular([a], "57300", viejo, ahora=2) is None

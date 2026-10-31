@@ -10,6 +10,7 @@ from pathlib import Path
 import numpy as np
 from PIL import Image, UnidentifiedImageError
 
+Image.MAX_IMAGE_PIXELS = 40_000_000
 MAX_LOGO = 5 * 1024 * 1024
 MAX_PISTA = 20 * 1024 * 1024
 SEGUNDOS_PISTA = 60
@@ -34,7 +35,7 @@ def guardar_logo(contenido: bytes, destino: Path) -> str | None:
     try:
         imagen = Image.open(io.BytesIO(contenido))
         imagen.load()
-    except (UnidentifiedImageError, OSError):
+    except (UnidentifiedImageError, OSError, Image.DecompressionBombError):
         raise ValueError("Use a PNG or JPG logo")
     imagen = imagen.convert("RGBA")
     imagen.thumbnail((800, 800), Image.LANCZOS)
@@ -46,11 +47,17 @@ def guardar_pista(contenido: bytes, destino: Path) -> None:
     """Deja la pista en AAC y corta a 60 s. ValueError si ffmpeg no la reconoce."""
     if len(contenido) > MAX_PISTA:
         raise ValueError("Use a track under 20 MB")
+    nueva = destino.with_name(destino.stem + "_nueva.m4a")
     with tempfile.NamedTemporaryFile() as original:
         original.write(contenido)
         original.flush()
-        r = subprocess.run(["ffmpeg", "-y", "-loglevel", "error", "-i", original.name, "-vn", "-t", str(SEGUNDOS_PISTA),
-                            "-c:a", "aac", "-b:a", "160k", "-f", "ipod", str(destino)], capture_output=True)
-    if r.returncode != 0:
-        destino.unlink(missing_ok=True)
+        try:
+            r = subprocess.run(["ffmpeg", "-y", "-loglevel", "error", "-protocol_whitelist", "file,pipe", "-i", original.name,
+                                "-vn", "-t", str(SEGUNDOS_PISTA), "-c:a", "aac", "-b:a", "160k", "-f", "ipod", str(nueva)],
+                               capture_output=True, timeout=60)
+        except subprocess.TimeoutExpired:
+            r = None
+    if r is None or r.returncode != 0:
+        nueva.unlink(missing_ok=True)
         raise ValueError("Use an MP3 or M4A track")
+    nueva.replace(destino)  # la pista anterior solo se reemplaza si la nueva sirve

@@ -7,6 +7,7 @@ repetidos de Meta se ignoran por su id. Cuando un Reel termina, se manda con sus
 from __future__ import annotations
 
 import hashlib
+import os
 import threading
 import time
 import traceback
@@ -16,13 +17,15 @@ from camtoshop.adaptadores.config import secreto
 from camtoshop.adaptadores.whatsapp import ClienteWhatsApp, mensajes_del_webhook
 from camtoshop.aplicacion.agente_diario import AgenteDiario
 from camtoshop.aplicacion.servicio import Proyecto, Servicio
-from camtoshop.dominio.comercio import comercio_de, vincular
+from camtoshop.dominio.comercio import codigo_en, comercio_de, vincular
 from camtoshop.dominio.publicacion import canales_de_destino
 from camtoshop.dominio.conversacion import (
-    CrearDesdeFotos, CrearDesdeProducto, CrearDesdeVideo, Mensaje, OtraPropuesta, PedirCambio, Publicar, Responder,
+    Chat, CrearDesdeFotos, CrearDesdeProducto, CrearDesdeVideo, Mensaje, OtraPropuesta, PedirCambio, Publicar, Responder,
     atender, botones, fallo, listo_para_aprobar, t,
 )
 
+MAX_GENERANDO = 15 * 60  # segundos: más que esto significa que el proceso murió
+MAX_INTENTOS = 5  # códigos fallidos por celular y hora
 NOMBRES_CANAL = {"shopify": "Shopify", "catalogo_meta": "Catálogo de Meta", "instagram": "Instagram"}
 
 
@@ -39,6 +42,7 @@ class AgenteWhatsApp:
         self._vistos: OrderedDict[str, None] = OrderedDict()
         self._cerrojos: defaultdict[str, threading.Lock] = defaultdict(threading.Lock)
         self._wa = None
+        self._fallidos: defaultdict[str, list[float]] = defaultdict(list)
         self.diario = AgenteDiario(servicio, lambda: self.wa)
         Proyecto.al_terminar = self.proyecto_terminado
 
@@ -65,18 +69,36 @@ class AgenteWhatsApp:
 
     def _atender(self, celular: str, msg: Mensaje):
         comercios = self._repo.todos()
-        vinculado = vincular(comercios, celular, msg.texto, time.time())  # también si el número ya era de otro
+        ahora = time.time()
+        recientes = self._fallidos[celular] = [x for x in self._fallidos[celular] if ahora - x < 3600]
+        vinculado = None
+        if len(recientes) < MAX_INTENTOS:
+            vinculado = vincular(comercios, celular, msg.texto, ahora)  # también si el número ya era de otro
         if vinculado:
             for c in comercios:
                 self._repo.guardar(c)
+            self._repo.guardar_chat(Chat(celular))  # lo pendiente era de la cuenta anterior
             self.wa.texto(celular, t(vinculado, "vinculado", nombre=vinculado.nombre))
+            return
+        if codigo_en(msg.texto):
+            recientes.append(ahora)
+            self.wa.texto(celular, t(None, "muchos_codigos"))
             return
         comercio = comercio_de(celular, comercios)
         if comercio is None:
             self.wa.texto(celular, t(None, "desconocido", portal=self._portal))
             return
+        if msg.tipo == "video" and os.environ.get("K_SERVICE"):  # el flujo de video aún no corre en la nube
+            self.wa.texto(celular, t(comercio, "solo_fotos"))
+            return
         chat = self._repo.chat(celular)
+        if chat.estado == "generando" and ahora - chat.generando_desde > MAX_GENERANDO:
+            fallo(chat)
         acciones = atender(chat, msg, comercio, time.strftime("%Y-%m-%d"))
+        if chat.estado == "generando" and not chat.generando_desde:
+            chat.generando_desde = ahora
+        elif chat.estado != "generando":
+            chat.generando_desde = 0.0
         self._repo.guardar(comercio)
         self._repo.guardar_chat(chat)
         try:
@@ -111,13 +133,33 @@ class AgenteWhatsApp:
                 self.wa.texto(celular, t(comercio, "sin_otro"))
         elif isinstance(accion, Publicar):
             pr = self._servicio.obtener(accion.proyecto)
+            if not self._es_vigente(pr, comercio, accion.version):
+                self.wa.texto(celular, t(comercio, "otra_version"))
+                return
             canales = canales_de_destino(pr.estado.get("origen", ""),
                                          [k for k, v in self._servicio.canales_de(comercio).items() if v])
             resultados = self._servicio.publicar(pr, canales, comercio)
             self.wa.texto(celular, self._resumen(resultados))
+            if resultados and not any(r["ok"] for r in resultados):
+                chat = self._repo.chat(celular)  # la aprobación sigue viva: nada salió
+                listo_para_aprobar(chat, pr.id, accion.version)
+                self._repo.guardar_chat(chat)
+                self.wa.texto(celular, t(comercio, "reintentar"))
         elif isinstance(accion, PedirCambio):
             pr = self._servicio.obtener(accion.proyecto)
+            if pr is None or pr.estado.get("comercio_id") != comercio.id:
+                fallo_chat = self._repo.chat(celular)
+                fallo(fallo_chat)
+                self._repo.guardar_chat(fallo_chat)
+                self.wa.texto(celular, t(comercio, "otra_version"))
+                return
             self._servicio.pedir_cambio(pr, accion.pedido)
+
+    @staticmethod
+    def _es_vigente(pr: Proyecto | None, comercio, version: str) -> bool:
+        """Solo sale la versión exacta que se aprobó, y solo del comercio dueño."""
+        return (pr is not None and pr.estado.get("comercio_id") == comercio.id and pr.estado.get("fase") == "listo"
+                and version_de(pr) == version)
 
     def _anotar(self, celular: str, pr: Proyecto):
         chat = self._repo.chat(celular)
@@ -155,8 +197,9 @@ class AgenteWhatsApp:
                 reel = pr.ruta(pr.estado["reels"][pr.estado["look"]]["archivo"])
                 cuerpo = t(comercio, "aprobar", pie=self._servicio.pie(pr))
                 self.wa.video_con_botones(celular, reel, cuerpo, botones(comercio, pr.id, version))
-            except Exception:
+            except Exception as e:
                 traceback.print_exc()
                 fallo(chat)
+                self.wa.texto(celular, t(comercio, "error", error=str(e)[:200]))
             finally:
                 self._repo.guardar_chat(chat)

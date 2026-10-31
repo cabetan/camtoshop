@@ -62,6 +62,12 @@ main { padding: 32px clamp(16px, 4vw, 56px) 72px; max-width: 1180px; width: 100%
 .pasos button { background: var(--papel); border: 2px solid var(--tinta); border-radius: 99px; padding: 6px 14px; font: 600 15px Barlow, sans-serif; cursor: pointer; }
 .pasos button[data-hecho] { border-color: transparent; background: none; color: var(--suave); text-decoration: line-through; cursor: default; }
 
+.nuevo { margin-bottom: 32px; padding: 20px; background: var(--gris); border-radius: 4px; }
+.campos { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.4fr) auto; gap: 16px; align-items: end; }
+.campos label { margin-top: 12px; }
+.campos input { background: var(--papel); }
+.nuevo .nota { margin-top: 12px; }
+
 /* Reels */
 .rejilla { display: grid; grid-template-columns: repeat(auto-fill, minmax(190px, 1fr)); gap: 24px 20px; }
 .tarjeta { background: none; border: 0; padding: 0; text-align: left; cursor: pointer; font: inherit; color: inherit; }
@@ -132,6 +138,7 @@ fieldset > .secundario { margin: 0 0 8px; }
 #shop-form .secundario { margin-top: 16px; }
 
 @media (max-width: 860px) {
+  .campos { grid-template-columns: minmax(0, 1fr); }
   .acceso { grid-template-columns: 1fr; }
   .cartel { gap: 32px; }
   .app { display: block; padding-bottom: 72px; }

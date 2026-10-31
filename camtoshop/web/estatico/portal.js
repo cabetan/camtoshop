@@ -99,7 +99,7 @@ function pintarPasos(e) {
   ];
   const caja = $("pasos"); caja.textContent = "";
   caja.hidden = pasos.every(p => p[1]);
-  caja.append(crear("strong", { textContent: "Before your first Reel" }));
+  caja.append(crear("strong", { textContent: "Finish setting up" }));
   pasos.forEach(([texto, hecho, vista]) => {
     const b = crear("button", { textContent: texto, disabled: hecho, onclick: () => ir(vista) });
     if (hecho) b.dataset.hecho = "1";
@@ -138,7 +138,7 @@ function estadoDe(r) {
   if (r.fase === "error") return ["Couldn't finish this Reel", ""];
   if (r.fase !== "listo") return ["Rendering…", ""];
   if (r.publicaciones.length) return ["Published", "vivo"];
-  return ["Waiting for your approval on WhatsApp", ""];
+  return ["Ready for your approval", ""];
 }
 
 async function cargarReels() {
@@ -249,6 +249,7 @@ function pintarDetalle(r) {
   r.publicaciones.filter(p => p.url).forEach(p => pub.append(crear("a", { href: p.url, target: "_blank", rel: "noopener", textContent: "See it on Instagram" })));
   const ocupado = r.fase !== "listo" && r.fase !== "error";
   $("d-aplicar").disabled = ocupado;
+  $("d-publicar").hidden = ocupado || r.fase === "error" || !yo.instagram || r.publicaciones.length > 0;
   $("d-aplicar").textContent = ocupado ? "Rendering…" : "Render this version";
 }
 
@@ -358,6 +359,22 @@ $("pista-archivo").onchange = ev => hacer(async () => {
   ev.target.value = ""; pintar(e); refrescarEstudio();
   $("guardado").textContent = "Track saved. New Reels will use it.";
 });
+$("d-publicar").onclick = () => hacer(async () => {
+  $("d-publicar").disabled = true; $("d-publicar").textContent = "Publishing…";
+  try { await pedir(`/api/portal/reels/${reelAbierto}/publicar`, "POST"); await cargarReels(); }
+  finally { $("d-publicar").disabled = false; $("d-publicar").textContent = "Publish to Instagram"; }
+});
+$("nuevo").onsubmit = ev => {
+  ev.preventDefault();
+  hacer(async () => {
+    const datos = new FormData();
+    [...$("nuevo-fotos").files].forEach(f => datos.append("fotos", f));
+    datos.append("texto", $("nuevo-texto").value);
+    await pedir("/api/portal/reels", "POST", datos);
+    ev.target.reset();
+    await cargarReels();
+  });
+};
 $("d-aplicar").onclick = () => hacer(async () => {
   const { estilo, fuente, primario, secundario, musica } = elegidoReel;
   await pedir(`/api/portal/reels/${reelAbierto}/estilo`, "POST", { estilo, fuente, primario, secundario, musica });

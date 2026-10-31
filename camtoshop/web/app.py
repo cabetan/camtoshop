@@ -40,6 +40,7 @@ META_APP_ID = "2033143300693121"
 portal = Portal(servicio.repo_comercios, MetaOAuth(META_APP_ID, secreto("META_APP_SECRET") or ""), ConectorShopify(),
                 time.time)
 app.include_router(rutas_del_portal(portal, servicio.repo_comercios, META_APP_ID, servicio))
+threading.Thread(target=servicio.recuperar, daemon=True).start()
 RUTAS_PUBLICAS = ("/webhook/", "/portal", "/api/portal", "/estatico/")
 
 
@@ -51,10 +52,14 @@ def llega_de_internet(cabeceras) -> bool:
 async def solo_lo_publico(request: Request, siguiente):
     """Por el túnel solo se ve el portal y el webhook: el resto puede gastar créditos y publicar."""
     if llega_de_internet(request.headers) and request.url.path == "/":
-        return FileResponse(ESTATICO / "inicio.html", headers={"Cache-Control": "no-cache"})
-    if llega_de_internet(request.headers) and not request.url.path.startswith(RUTAS_PUBLICAS):
-        return JSONResponse({"detail": "Not found"}, 404)
-    return await siguiente(request)
+        respuesta = FileResponse(ESTATICO / "inicio.html", headers={"Cache-Control": "no-cache"})
+    elif llega_de_internet(request.headers) and not request.url.path.startswith(RUTAS_PUBLICAS):
+        respuesta = JSONResponse({"detail": "Not found"}, 404)
+    else:
+        respuesta = await siguiente(request)
+    respuesta.headers.update({"X-Content-Type-Options": "nosniff", "X-Frame-Options": "DENY",
+                              "Strict-Transport-Security": "max-age=31536000"})
+    return respuesta
 
 
 def _proyecto(identificador: str) -> Proyecto:

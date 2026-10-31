@@ -35,6 +35,9 @@ TEXTOS = {
         "error": "Uy, algo falló creando tu Reel: {error}. ¿Lo intentamos otra vez con otras fotos?",
         "hoy_no": "Listo, hoy descansamos. Mañana te propongo otra cosa ☀️",
         "sin_otro": "No tengo otro producto para proponerte hoy. Mándame una foto y hacemos uno nuevo.",
+        "solo_fotos": "Por ahora trabajo con fotos: mándame de 1 a 8 fotos del producto y dime cuánto vale.",
+        "reintentar": "No se pudo publicar. Toca Publicar otra vez en el último Reel.",
+        "muchos_codigos": "Ese código no funciona. Pide uno nuevo en el portal.",
     },
     "en": {
         "desconocido": "Hi! I'm Camtoshop 📸 To turn your photos into content, sign up at {portal} and link this "
@@ -56,6 +59,9 @@ TEXTOS = {
         "error": "Oops, something failed while making your Reel: {error}. Shall we try again with other photos?",
         "hoy_no": "Sure, we'll rest today. I'll suggest something else tomorrow ☀️",
         "sin_otro": "I don't have another product to suggest today. Send me a photo and we'll make a new one.",
+        "solo_fotos": "For now I work with photos: send 1 to 8 photos of the product and tell me the price.",
+        "reintentar": "That didn't publish. Tap Publish again on the latest Reel.",
+        "muchos_codigos": "That code doesn't work. Get a new one in the portal.",
     },
 }
 BOTONES = {"es": ("Publicar", "Cambiar", "Descartar"), "en": ("Publish", "Change", "Discard")}
@@ -82,6 +88,7 @@ class Chat:
     version: str = ""
     propuesta: str = ""  # producto que el agente diario propuso y sigue sin respuesta
     pedido_propuesta: str = ""  # lo aprendido de las métricas, para el guion de ese Reel
+    generando_desde: float = 0.0  # si el proceso muere, a los 15 minutos el chat se libera
 
 
 @dataclass(frozen=True)
@@ -116,6 +123,7 @@ class OtraPropuesta:
 @dataclass(frozen=True)
 class Publicar:
     proyecto: str
+    version: str
 
 
 @dataclass(frozen=True)
@@ -180,7 +188,7 @@ def atender(chat: Chat, msg: Mensaje, comercio: Comercio, dia: str) -> list:
             return [Responder(t(comercio, "otra_version"))]
         if accion == "publicar":
             chat.estado = ""
-            return [Responder(t(comercio, "publicando")), Publicar(proyecto)]
+            return [Responder(t(comercio, "publicando")), Publicar(proyecto, version)]
         if accion == "cambiar":
             chat.estado = "cambio"
             return [Responder(t(comercio, "cual_cambio"))]

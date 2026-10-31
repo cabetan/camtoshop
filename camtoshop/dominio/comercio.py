@@ -15,7 +15,7 @@ from camtoshop.dominio.marca import Marca
 
 VIGENCIA_CODIGO = 30 * 60  # segundos
 LIMITE_DIARIO = 15  # Reels por comercio y día: protege los créditos y frena abusos
-_CODIGO = re.compile(r"\bCAMTO[- ]?(\d{4})\b", re.I)
+_CODIGO = re.compile(r"\bCAMTO[- ]?(\d{6})\b", re.I)
 
 
 @dataclass
@@ -58,12 +58,9 @@ def normalizar_celular(texto: str, pais: str = "57") -> str:
 
 
 def nuevo_codigo(comercio: Comercio, ahora: float) -> str:
-    """Código para vincular un celular. Se guarda con su vencimiento y se limpian los vencidos."""
-    comercio.codigos = {c: v for c, v in comercio.codigos.items() if v > ahora}
-    codigo = f"{secrets.randbelow(9000) + 1000}"
-    while codigo in comercio.codigos:
-        codigo = f"{secrets.randbelow(9000) + 1000}"
-    comercio.codigos[codigo] = ahora + VIGENCIA_CODIGO
+    """Código para vincular un celular. Reemplaza al anterior: no se pueden acumular."""
+    codigo = f"{secrets.randbelow(900000) + 100000}"
+    comercio.codigos = {codigo: ahora + VIGENCIA_CODIGO}  # un solo código vivo por comercio
     return f"CAMTO-{codigo}"
 
 

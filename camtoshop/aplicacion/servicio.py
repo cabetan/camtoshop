@@ -47,6 +47,7 @@ from camtoshop.dominio.producto import (
 )
 from camtoshop.dominio.publicacion import pie_de_instagram, publicar
 from camtoshop.dominio.marca import Marca, tema_de
+from camtoshop.dominio.publicacion import canales_de_destino
 from camtoshop.dominio.reel_fotos import Guion, PuertosFotos, armar_tomas, precio_respaldado, reel_desde_fotos
 
 RAIZ = Path(__file__).resolve().parents[2]
@@ -341,6 +342,7 @@ class Servicio:
         logo = self.repo_comercios.archivo(comercio_id, "logo.png") if marca.logo else None
         if marca.musica == "propia":
             musica = self.repo_comercios.archivo(comercio_id, "musica.m4a")
+            musica = musica if musica.exists() else None
         else:
             musica = None if marca.musica == "ninguna" else PISTAS / f"{marca.musica}.m4a"
         return RenderizadorFotos(lambda concepto, img, fuente, salida: mascaras(c, concepto, img, fuente, salida),
@@ -459,6 +461,19 @@ class Servicio:
             pr.guardar(fase="listo", progreso=100)
         except Exception as e:
             pr.guardar(fase="error", error=f"{e}", detalle_error=traceback.format_exc()[-2000:])
+
+    def recuperar(self):
+        """Al arrancar: lo que estaba en proceso murió con la instancia anterior."""
+        for carpeta in self._datos.iterdir():
+            if (carpeta / "estado.json").exists() and Proyecto(carpeta).estado.get("fase") in {"en_cola", "procesando"}:
+                Proyecto(carpeta).guardar(fase="error", error="The server restarted. Please try again.")
+
+    def reels_de_hoy(self) -> int:
+        return sum(1 for c in self._datos.iterdir() if c.name.startswith(time.strftime("%Y%m%d")))
+
+    def publicar_en_canales(self, pr: Proyecto, comercio) -> list[dict]:
+        canales = canales_de_destino(pr.estado.get("origen", ""), [k for k, v in self.canales_de(comercio).items() if v])
+        return self.publicar(pr, canales, comercio)
 
     def reels_de(self, comercio_id: str) -> list[dict]:
         salida = []
