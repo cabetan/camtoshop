@@ -233,7 +233,7 @@ def reel_desde_fotos(analisis, texto: str, fotos: list, recortes: list, precio: 
         if aprobado or not problemas:
             break
         anotar("Corrige: " + "; ".join(problemas))
-        nuevo = p.guionista.guion(analisis, texto, fotos[principal], "", guion, problemas)
+        nuevo = p.guionista.guion(analisis, texto, fotos[principal], pedido, guion, problemas)
         guion, mas = limpiar_guion(nuevo, fuente)
         avisos += mas
     return ReelDeFotos(destino, guion, tomas, bitacora, avisos)

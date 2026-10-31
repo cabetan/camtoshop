@@ -74,7 +74,8 @@ class GuionistaSpark:
         tarea = "Write the script of a product Reel made only from photos: hook, 3 benefits, call to action."
         if anterior:
             tarea = (f"Rewrite this Reel script: {json.dumps(asdict(anterior), ensure_ascii=False)}. "
-                     + (f"The merchant asks: \"{pedido}\". " if pedido else "")
+                     + (f"The merchant asks: \"{pedido}\". This request overrides any style rule below, "
+                        "including how the hook is written. " if pedido else "")
                      + (f"A reviewer found: {'; '.join(problemas)}. " if problemas else "")
                      + "Keep what was not asked to change.")
         hechos = {k: getattr(analisis, k) for k in ("nombre", "marca", "categoria", "atributos", "texto_etiqueta")}
