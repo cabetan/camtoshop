@@ -11,13 +11,13 @@ from dataclasses import dataclass
 from datetime import date
 
 from camtoshop.dominio.producto import ProductoDeTienda, apto_para_reel
-from camtoshop.dominio.reel_fotos import montos_en
+from camtoshop.dominio.reel_fotos import PEDIDO_PRECIO, montos_en
 
 DESCANSO_DIAS = 14  # un producto no se repite antes de esto, mientras haya otros
 MIN_POR_ESTILO = 2
 INSTRUCCION = {
     "pregunta": "Open with a question the buyer would ask themselves.",
-    "precio": "Open with the value or the price.",
+    "precio": PEDIDO_PRECIO,
     "directo": "Open with the main benefit, stated directly.",
 }
 

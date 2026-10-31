@@ -23,3 +23,13 @@ def test_la_correccion_conserva_el_pedido():
     reel_desde_fotos(analisis, "vela 45 mil solo pide", ["f"], [None], None, None, None, "d",
                      PuertosFotos(Guionista(), None, Render(), Revisor()), pedido="Open with the price.", rondas=1)
     assert pedidos == ["Open with the price.", "Open with the price."]
+
+
+def test_gancho_con_precio_conserva_el_precio_real():
+    from camtoshop.dominio.agente_diario import estilo_de
+    from camtoshop.dominio.producto import Precio
+    from camtoshop.dominio.reel_fotos import gancho_con_precio
+
+    g = gancho_con_precio(Guion("Audífonos JBL negros de diadema?", [], "", []), "Audífonos JBL negros de diadema",
+                          Precio(250000, "COP"))
+    assert "250" in g.gancho and estilo_de(g.gancho) == "precio" and "?" not in g.gancho

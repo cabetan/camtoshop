@@ -15,6 +15,7 @@ from dataclasses import dataclass, field
 from camtoshop.dominio.producto import Precio
 
 PALABRAS_GANCHO = 6
+PEDIDO_PRECIO = "Open with the value or the price."
 PALABRAS_BENEFICIO = 4
 MAX_BENEFICIOS = 3
 DURACION = (8.0, 20.0)  # con nota de voz el Reel puede durar lo que dura la voz, hasta 20 s
@@ -173,6 +174,11 @@ def armar_tomas(guion: Guion, fotos: int, escenas: int, precio: Precio | None,
     return tomas
 
 
+def gancho_con_precio(guion: Guion, nombre: str, precio: Precio) -> Guion:
+    """El recorte a seis palabras se come el precio: este gancho se arma con el dato real."""
+    return replace(guion, gancho=f"{recortar_palabras(nombre, 3)} {precio.texto()}")
+
+
 # --- Caso de uso ----------------------------------------------------------------
 
 @dataclass
@@ -208,6 +214,8 @@ def reel_desde_fotos(analisis, texto: str, fotos: list, recortes: list, precio: 
     guion, avisos = limpiar_guion(p.guionista.guion(analisis, texto, fotos[principal], pedido, anterior), fuente)
     for a in avisos:
         anotar(a)
+    if pedido == PEDIDO_PRECIO and precio is not None:
+        guion = gancho_con_precio(guion, analisis.nombre, precio)
 
     reales = [r for r in recortes if r is not None]
     necesarias = len(guion.beneficios) // 2
@@ -236,4 +244,6 @@ def reel_desde_fotos(analisis, texto: str, fotos: list, recortes: list, precio: 
         nuevo = p.guionista.guion(analisis, texto, fotos[principal], pedido, guion, problemas)
         guion, mas = limpiar_guion(nuevo, fuente)
         avisos += mas
+        if pedido == PEDIDO_PRECIO and precio is not None:
+            guion = gancho_con_precio(guion, analisis.nombre, precio)
     return ReelDeFotos(destino, guion, tomas, bitacora, avisos)
