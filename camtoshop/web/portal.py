@@ -116,7 +116,10 @@ def rutas_del_portal(portal: Portal, repo, app_id: str) -> APIRouter:
     @r.get("/portal/meta/volver")
     def meta_volver(request: Request, code: str = "", state: str = ""):
         # El state firmado debe ser del mismo comercio que tiene la sesión abierta.
-        c = comercio_actual(request)
+        try:
+            c = comercio_actual(request)
+        except HTTPException:
+            return RedirectResponse("/portal", 303)
         if verificar(_clave(), "meta", state, time.time()) != c.id or not code:
             return RedirectResponse("/portal?error=meta", 303)
         try:
