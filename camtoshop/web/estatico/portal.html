@@ -1,52 +1,64 @@
 <!doctype html>
-<html lang="en">
+<html lang="es">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Camtoshop</title>
-<meta name="description" content="Your Reels, your brand. Send a product photo on WhatsApp and approve the Reel before it goes live.">
+<meta name="description" content="Tus Reels, con tu marca. Your Reels, in your brand.">
+<link rel="icon" href="/estatico/favicon.png" type="image/png">
+<link rel="apple-touch-icon" href="/estatico/apple-touch-icon.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@800;900&family=Barlow:wght@400;500;600;700&family=Caveat:wght@700&family=Playfair+Display:wght@800&family=Poppins:wght@800&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="/estatico/portal.css">
+<script src="/estatico/idioma.js"></script>
 </head>
 <body>
 <section id="acceso" class="acceso" hidden>
   <div class="cartel">
-    <a class="logo" href="/">Camtoshop</a>
-    <h1>Your phone is the studio.</h1>
-    <p>Send a product photo on WhatsApp. Get a Reel in your colors, with your logo and your music. Nothing goes live until you tap Publish.</p>
+    <div class="fila-cartel">
+      <a class="logo" href="/">Camtoshop</a>
+      <div class="idiomas" role="group" aria-label="Idioma / Language"><button data-idioma="es">ES</button><button data-idioma="en">EN</button></div>
+    </div>
+    <h1 data-t="cartel"></h1>
+    <p data-t="cartel_t"></p>
   </div>
   <div class="entrada">
     <form id="formulario">
-      <h2 id="titulo-acceso">Create your account</h2>
+      <h2 id="titulo-acceso"></h2>
       <div id="solo-registro">
-        <label for="nombre">Business name</label><input id="nombre" autocomplete="organization">
+        <label for="nombre" data-t="negocio"></label><input id="nombre" autocomplete="organization">
       </div>
-      <label for="correo">Email</label><input id="correo" type="email" required autocomplete="email">
-      <label for="clave">Password</label><input id="clave" type="password" required autocomplete="current-password">
+      <label for="correo" data-t="correo"></label><input id="correo" type="email" required autocomplete="email">
+      <label for="clave" data-t="clave"></label><input id="clave" type="password" required autocomplete="current-password">
       <div id="solo-registro2">
-        <label for="idioma">WhatsApp language</label>
-        <select id="idioma"><option value="es">Español</option><option value="en">English</option></select>
+        <label for="idioma-wa" data-t="idioma_wa"></label>
+        <select id="idioma-wa"><option value="es">Español</option><option value="en">English</option></select>
       </div>
-      <button class="principal ancho" id="enviar">Create account</button>
+      <button class="principal ancho" id="enviar"></button>
     </form>
-    <button class="enlace" id="cambiar-modo">I already have an account</button>
+    <button class="enlace" id="cambiar-modo"></button>
     <p class="aviso" data-aviso hidden></p>
   </div>
 </section>
 
 <div id="app" class="app" hidden>
-  <nav class="lateral" aria-label="Sections">
+  <div class="barra-movil">
+    <a class="logo" href="/">Camtoshop</a>
+    <div class="idiomas" role="group" aria-label="Idioma / Language"><button data-idioma="es">ES</button><button data-idioma="en">EN</button></div>
+    <button class="enlace salir" data-t="salir"></button>
+  </div>
+  <nav class="lateral" aria-label="Secciones / Sections">
     <a class="logo" href="/">Camtoshop</a>
     <div class="pestanas">
-      <button data-vista="reels">Reels</button>
-      <button data-vista="marca">Brand</button>
-      <button data-vista="conexiones">Connections</button>
+      <button data-vista="reels" data-t="nav_reels"></button>
+      <button data-vista="marca" data-t="nav_marca"></button>
+      <button data-vista="conexiones" data-t="nav_conexiones"></button>
     </div>
     <div class="cuenta">
+      <div class="idiomas" role="group" aria-label="Idioma / Language"><button data-idioma="es">ES</button><button data-idioma="en">EN</button></div>
       <span id="nombre-negocio"></span>
-      <button class="enlace" id="salir">Sign out</button>
+      <button class="enlace salir" data-t="salir"></button>
     </div>
   </nav>
 
@@ -55,65 +67,65 @@
 
     <section id="v-reels" hidden>
       <div class="encabezado">
-        <h1>Reels</h1>
-        <a class="principal" id="hacer-reel" target="_blank" rel="noopener">Make a Reel on WhatsApp</a>
+        <h1 data-t="reels"></h1>
+        <a class="secundario" id="hacer-reel" target="_blank" rel="noopener" data-t="reel_wa"></a>
       </div>
       <div id="pasos" class="pasos" hidden></div>
       <form id="nuevo" class="nuevo">
-        <h2>Make a Reel here</h2>
+        <h2 data-t="nuevo"></h2>
         <div class="campos">
-          <div><label for="nuevo-fotos">Photos of one product</label><input id="nuevo-fotos" type="file" accept="image/jpeg,image/png,image/webp" multiple required></div>
-          <div><label for="nuevo-texto">What is it and what does it cost?</label><input id="nuevo-texto" maxlength="500" required placeholder="Soy candle, lavender scent, $25"></div>
-          <button class="principal">Make my Reel</button>
+          <div><label for="nuevo-fotos" data-t="nuevo_fotos"></label><input id="nuevo-fotos" type="file" accept="image/jpeg,image/png,image/webp" multiple required></div>
+          <div><label for="nuevo-texto" data-t="nuevo_texto"></label><input id="nuevo-texto" maxlength="500" required data-t-ph="nuevo_ph"></div>
+          <button class="principal" data-t="nuevo_boton"></button>
         </div>
-        <p class="nota">Takes about four minutes. It uses your brand settings, and nothing is published until you approve it.</p>
+        <p class="nota" data-t="nuevo_nota"></p>
       </form>
       <div id="reels" class="rejilla"></div>
       <div id="sin-reels" class="vacio" hidden>
-        <h2>Your first Reel starts with one photo</h2>
-        <p>Upload a product photo above, or send it to Camtoshop on WhatsApp. The Reel appears here in about four minutes.</p>
+        <h2 data-t="vacio"></h2>
+        <p data-t="vacio_t"></p>
       </div>
     </section>
 
     <section id="v-detalle" hidden>
-      <button class="enlace volver" id="volver">All Reels</button>
+      <button class="enlace volver" id="volver" data-t="todos"></button>
       <div class="detalle">
         <div class="pantalla"><video id="video" controls playsinline></video></div>
         <div class="ajustes">
           <h1 id="d-nombre"></h1>
           <p id="d-estado" class="nota"></p>
           <div id="d-publicado"></div>
+          <button class="principal ancho" id="d-publicar" hidden data-t="publicar_ig"></button>
           <div id="d-controles"></div>
-          <button class="secundario ancho" id="d-publicar" hidden>Publish to Instagram</button>
-          <button class="principal ancho" id="d-aplicar">Render this version</button>
-          <p class="nota">Takes about a minute. Nothing is published until you approve it.</p>
+          <button class="secundario ancho" id="d-aplicar"></button>
+          <p class="nota" data-t="aplicar_nota"></p>
         </div>
       </div>
     </section>
 
     <section id="v-marca" hidden>
       <div class="encabezado">
-        <h1>Your brand</h1>
+        <h1 data-t="marca"></h1>
         <span class="nota" id="guardado" aria-live="polite"></span>
       </div>
       <div class="estudio">
         <div class="controles">
           <fieldset>
-            <legend>Logo</legend>
+            <legend data-t="logo"></legend>
             <div class="fila-logo">
-              <img id="logo-vista" alt="Your logo" hidden>
-              <label class="secundario" for="logo-archivo">Upload logo</label>
+              <img id="logo-vista" alt="Logo" hidden>
+              <label class="secundario" for="logo-archivo" data-t="subir_logo"></label>
               <input id="logo-archivo" class="oculto" type="file" accept="image/png,image/jpeg,image/webp">
-              <button class="enlace" id="logo-quitar" hidden>Remove</button>
+              <button class="enlace" id="logo-quitar" hidden data-t="quitar"></button>
             </div>
-            <p class="nota">A PNG with a transparent background works best. It goes at the top of every Reel.</p>
+            <p class="nota" data-t="logo_nota"></p>
           </fieldset>
           <div id="m-controles"></div>
           <fieldset>
-            <legend>Your own music</legend>
-            <label class="secundario" for="pista-archivo">Upload a track</label>
+            <legend data-t="mi_musica"></legend>
+            <label class="secundario" for="pista-archivo" data-t="subir_pista"></label>
             <input id="pista-archivo" class="oculto" type="file" accept="audio/mpeg,audio/mp4,audio/x-m4a,audio/aac,audio/wav">
-            <p class="nota">Only upload music you have the rights to use. Instagram's music library isn't available to outside apps, so you can also add a song from the Instagram app after publishing.</p>
+            <p class="nota" data-t="musica_nota"></p>
           </fieldset>
         </div>
         <div class="vista-previa">
@@ -124,28 +136,28 @@
     </section>
 
     <section id="v-conexiones" hidden>
-      <h1>Connections</h1>
+      <h1 data-t="conexiones"></h1>
       <div class="conexion">
         <div><h2>Instagram</h2><p class="nota" id="meta-nota"></p><div id="meta-elegir"></div></div>
-        <div class="accion"><a class="principal" id="meta-conectar" href="/portal/meta/iniciar">Connect Instagram</a><button class="secundario" id="meta-quitar" hidden>Disconnect</button></div>
+        <div class="accion"><a class="principal" id="meta-conectar" href="/portal/meta/iniciar" data-t="conectar_ig"></a><button class="secundario" id="meta-quitar" hidden data-t="desconectar"></button></div>
       </div>
       <div class="conexion">
         <div>
-          <h2>WhatsApp phones</h2>
-          <p class="nota">Link a phone to make and approve Reels from WhatsApp. While Camtoshop is in preview, the line only answers approved numbers. You can always make Reels in this portal.</p>
+          <h2 data-t="celulares"></h2>
+          <p class="nota" data-t="celulares_nota"></p>
           <div id="celulares"></div>
           <div id="codigo" hidden>
-            <p class="nota">Send this code to Camtoshop from the phone you'll use. It works for 30 minutes.</p>
+            <p class="nota" data-t="codigo_nota"></p>
             <div class="codigo" id="codigo-texto"></div>
-            <a class="whatsapp" id="codigo-enlace" target="_blank" rel="noopener">Open WhatsApp</a>
+            <a class="whatsapp" id="codigo-enlace" target="_blank" rel="noopener" data-t="abrir_wa"></a>
           </div>
         </div>
-        <div class="accion"><button class="principal" id="cel-nuevo">Add a phone</button></div>
+        <div class="accion"><button class="principal" id="cel-nuevo" data-t="agregar_cel"></button></div>
       </div>
       <div class="conexion" hidden><!-- Shopify apagado por ahora -->
         <div>
           <h2>Shopify</h2>
-          <p class="nota" id="shop-nota">Optional. New products become drafts in your store, and the daily agent can suggest what to promote.</p>
+          <p class="nota" id="shop-nota"></p>
           <form id="shop-form">
             <label for="tienda">Store address</label><input id="tienda" placeholder="your-store.myshopify.com">
             <label for="token">Admin API token</label><input id="token" type="password" autocomplete="off">

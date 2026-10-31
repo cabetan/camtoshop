@@ -1,23 +1,13 @@
 const $ = id => document.getElementById(id);
 const LINEA = "15550321707";
-const ESTILOS = [
-  { id: "impacto", nombre: "Bold", nota: "Big type over your photo" },
-  { id: "color", nombre: "Color", nota: "Your brand color behind the product" },
-  { id: "limpio", nombre: "Clean", nota: "Light and quiet" },
-];
+const ESTILOS = [{ id: "impacto" }, { id: "color" }, { id: "limpio" }];
 const FUENTES = [
-  { id: "barlow", nombre: "Poster", css: '900 30px "Barlow Condensed"' },
-  { id: "playfair", nombre: "Editorial", css: '800 24px "Playfair Display"' },
-  { id: "poppins", nombre: "Friendly", css: '800 22px Poppins' },
-  { id: "caveat", nombre: "Handmade", css: '700 30px Caveat' },
+  { id: "barlow", css: '900 30px "Barlow Condensed"' },
+  { id: "playfair", css: '800 24px "Playfair Display"' },
+  { id: "poppins", css: '800 22px Poppins' },
+  { id: "caveat", css: '700 30px Caveat' },
 ];
-const PISTAS = [
-  { id: "energia", nombre: "Upbeat", nota: "124 BPM, for launches and sales" },
-  { id: "calida", nombre: "Warm", nota: "84 BPM, relaxed keys" },
-  { id: "elegante", nombre: "Elegant", nota: "66 BPM, soft piano" },
-  { id: "propia", nombre: "My track", nota: "The one you uploaded" },
-  { id: "ninguna", nombre: "No music", nota: "Add a song in Instagram later" },
-];
+const PISTAS = [{ id: "energia" }, { id: "calida" }, { id: "elegante" }, { id: "propia" }, { id: "ninguna" }];
 const ESCALA_PREVIA = { barlow: [46, 1], playfair: [30, 1.08], poppins: [28, 1.1], caveat: [40, .95] };
 const CLARO = "#F7F6F2", OSCURO = "#141414";
 
@@ -26,7 +16,7 @@ let yo = null, reels = [], reelAbierto = null, elegidoReel = null, sondeo = null
 // --- Comunes ----------------------------------------------------------------------
 
 function avisar(texto) {
-  document.querySelectorAll("[data-aviso]").forEach(a => { a.textContent = texto || ""; a.hidden = !texto; });
+  document.querySelectorAll("[data-aviso]").forEach(a => { a.textContent = traducirError(texto || ""); a.hidden = !texto; });
 }
 
 async function pedir(ruta, metodo = "GET", datos) {
@@ -34,7 +24,7 @@ async function pedir(ruta, metodo = "GET", datos) {
   const r = await fetch(ruta, { method: metodo, headers: datos && !formulario ? { "Content-Type": "application/json" } : {},
                                 body: formulario ? datos : datos ? JSON.stringify(datos) : undefined });
   const cuerpo = await r.json().catch(() => ({}));
-  if (!r.ok) throw Object.assign(new Error(typeof cuerpo.detail === "string" ? cuerpo.detail : "That didn't work. Try again."), { estado: r.status });
+  if (!r.ok) throw Object.assign(new Error(typeof cuerpo.detail === "string" ? cuerpo.detail : t("error_general")), { estado: r.status });
   return cuerpo;
 }
 
@@ -76,7 +66,7 @@ function ir(vista) {
   });
   if (vista !== "detalle") $("video").pause();
   if (audio) { audio.pause(); audio = null; document.querySelectorAll(".oir").forEach(b => { b.textContent = "▶"; }); }
-  history.replaceState(null, "", vista === "reels" ? "/portal" : "#" + vista);
+  history.replaceState(null, "", vista === "reels" || vista === "detalle" ? "/portal" : "#" + vista);
   window.scrollTo(0, 0);
 }
 
@@ -86,6 +76,7 @@ function pintar(e) {
   yo = e;
   $("acceso").hidden = true; $("app").hidden = false;
   $("nombre-negocio").textContent = e.nombre;
+  aplicarIdioma();
   $("hacer-reel").href = `https://wa.me/${LINEA}`;
   pintarPasos(e); pintarConexiones(e); pintarLogo(e); pintarCuadro();
   if (sondeo && e.celulares.length > sondeo.antes) { clearInterval(sondeo.id); sondeo = null; $("codigo").hidden = true; }
@@ -93,13 +84,13 @@ function pintar(e) {
 
 function pintarPasos(e) {
   const pasos = [
-    ["Connect Instagram", !!e.instagram, "conexiones"],
-    ["Add your phone", e.celulares.length > 0, "conexiones"],
-    ["Set up your brand", e.marca.logo || e.marca.estilo !== "impacto" || e.marca.primario !== "#FFD23F", "marca"],
+    [t("paso_instagram"), !!e.instagram, "conexiones"],
+    [t("paso_celular"), e.celulares.length > 0, "conexiones"],
+    [t("paso_marca"), e.marca.logo || e.marca.estilo !== "impacto" || e.marca.primario !== "#FFD23F", "marca"],
   ];
   const caja = $("pasos"); caja.textContent = "";
   caja.hidden = pasos.every(p => p[1]);
-  caja.append(crear("strong", { textContent: "Finish setting up" }));
+  caja.append(crear("strong", { textContent: t("pendiente") }));
   pasos.forEach(([texto, hecho, vista]) => {
     const b = crear("button", { textContent: texto, disabled: hecho, onclick: () => ir(vista) });
     if (hecho) b.dataset.hecho = "1";
@@ -108,8 +99,7 @@ function pintarPasos(e) {
 }
 
 function pintarConexiones(e) {
-  $("meta-nota").textContent = e.instagram ? `Connected to @${e.instagram}, through the Page ${e.pagina}.`
-    : "Connect the Instagram professional account linked to your Facebook Page.";
+  $("meta-nota").textContent = e.instagram ? t("instagram_ok", { cuenta: e.instagram, pagina: e.pagina }) : t("instagram_nota");
   $("meta-conectar").hidden = !!e.instagram || e.demo;
   $("meta-quitar").hidden = !e.instagram || e.demo;
   const elegir = $("meta-elegir"); elegir.textContent = "";
@@ -119,7 +109,7 @@ function pintarConexiones(e) {
   })));
   const lista = $("celulares"); lista.textContent = "";
   e.celulares.forEach(n => lista.append(crear("div", { className: "celular" }, crear("span", { textContent: "+" + n }),
-    crear("button", { className: "enlace", textContent: "Remove", onclick: () => hacer(async () => {
+    crear("button", { className: "enlace", textContent: t("quitar"), onclick: () => hacer(async () => {
       await pedir("/api/portal/celulares/" + n, "DELETE"); return pedir("/api/portal/yo");
     }) }))));
   $("shop-nota").textContent = e.shopify ? `Connected to ${e.shopify}.`
@@ -131,14 +121,14 @@ function pintarConexiones(e) {
 // --- Reels ----------------------------------------------------------------------------
 
 function fecha(segundos) {
-  return new Date(segundos * 1000).toLocaleDateString(undefined, { month: "short", day: "numeric" });
+  return new Date(segundos * 1000).toLocaleDateString(idioma, { month: "short", day: "numeric" });
 }
 
 function estadoDe(r) {
-  if (r.fase === "error") return ["Couldn't finish this Reel", ""];
-  if (r.fase !== "listo") return ["Rendering…", ""];
-  if (r.publicaciones.length) return ["Published", "vivo"];
-  return ["Ready for your approval", ""];
+  if (r.fase === "error") return [t("estado_error"), ""];
+  if (r.fase !== "listo") return [t("estado_haciendo"), ""];
+  if (r.publicaciones.length) return [t("estado_publicado"), "vivo"];
+  return [t("estado_listo"), ""];
 }
 
 async function cargarReels() {
@@ -180,23 +170,24 @@ function grupo(titulo, opciones, clase, valor, alCambiar, armar) {
 
 function tarjetaEstilo(m) {
   return o => {
-    const t = tema({ ...m, estilo: o.id });
+    const aspecto = tema({ ...m, estilo: o.id });
     const muestra = crear("span", { className: "muestra" });
-    muestra.style.background = t.fondo || `url(${productoPrevio()}) center / cover, #555`;
-    return crear("span", {}, muestra, crear("b", { textContent: o.nombre }), crear("em", { textContent: o.nota }));
+    muestra.style.background = aspecto.fondo || `url(${productoPrevio()}) center / cover, #555`;
+    return crear("span", {}, muestra, crear("b", { textContent: t("estilo_" + o.id) }), crear("em", { textContent: t(`estilo_${o.id}_c`) }));
   };
 }
 
 function tarjetaFuente(o) {
   const tipo = crear("span", { className: "tipo", textContent: "$45.000" });
   tipo.style.font = o.css;
-  return crear("span", {}, tipo, crear("em", { textContent: o.nombre }));
+  return crear("span", {}, tipo, crear("em", { textContent: t("letra_" + o.id) }));
 }
 
 function tarjetaPista(o) {
-  const texto = crear("span", {}, crear("b", { textContent: o.nombre }), crear("em", { textContent: o.nota }));
+  const nombre = t("pista_" + o.id);
+  const texto = crear("span", {}, crear("b", { textContent: nombre }), crear("em", { textContent: t(`pista_${o.id}_t`) }));
   if (o.id === "ninguna") return crear("span", {}, texto);
-  const oir = crear("button", { type: "button", className: "oir", textContent: "▶", ariaLabel: "Play " + o.nombre });
+  const oir = crear("button", { type: "button", className: "oir", textContent: "▶", ariaLabel: t("reproducir", { pista: nombre }) });
   oir.onclick = ev => {
     ev.preventDefault();
     const sonaba = oir.textContent === "■";
@@ -213,8 +204,8 @@ function tarjetaPista(o) {
 function colores(m, alCambiar) {
   const entrada = (titulo, campo) => crear("label", { className: "color" },
     crear("input", { type: "color", value: m[campo], oninput: ev => alCambiar(campo, ev.target.value) }), titulo);
-  const caja = crear("div", { className: "opciones dos" }, entrada("Main color", "primario"), entrada("Second color", "secundario"));
-  return crear("fieldset", {}, crear("legend", { textContent: "Colors" }), caja);
+  const caja = crear("div", { className: "opciones dos" }, entrada(t("color_1"), "primario"), entrada(t("color_2"), "secundario"));
+  return crear("fieldset", {}, crear("legend", { textContent: t("colores") }), caja);
 }
 
 function pistasDisponibles() {
@@ -224,10 +215,10 @@ function pistasDisponibles() {
 function controles(caja, m, cambiar) {
   caja.textContent = "";
   caja.append(
-    grupo("Look", ESTILOS, "tres", m.estilo, v => cambiar("estilo", v, true), tarjetaEstilo(m)),
+    grupo(t("estilo"), ESTILOS, "tres", m.estilo, v => cambiar("estilo", v, true), tarjetaEstilo(m)),
     colores(m, (c, v) => cambiar(c, v)),
-    grupo("Lettering", FUENTES, "dos", m.fuente, v => cambiar("fuente", v), tarjetaFuente),
-    grupo("Music", pistasDisponibles(), "dos", m.musica, v => cambiar("musica", v), tarjetaPista),
+    grupo(t("letra"), FUENTES, "dos", m.fuente, v => cambiar("fuente", v), tarjetaFuente),
+    grupo(t("musica"), pistasDisponibles(), "dos", m.musica, v => cambiar("musica", v), tarjetaPista),
   );
 }
 
@@ -246,11 +237,11 @@ function pintarDetalle(r) {
   const [texto] = estadoDe(r);
   $("d-estado").textContent = r.fase === "error" ? `${texto}. ${r.error}` : texto;
   const pub = $("d-publicado"); pub.textContent = "";
-  r.publicaciones.filter(p => p.url).forEach(p => pub.append(crear("a", { href: p.url, target: "_blank", rel: "noopener", textContent: "See it on Instagram" })));
+  r.publicaciones.filter(p => p.url).forEach(p => pub.append(crear("a", { href: p.url, target: "_blank", rel: "noopener", textContent: t("ver_ig") })));
   const ocupado = r.fase !== "listo" && r.fase !== "error";
   $("d-aplicar").disabled = ocupado;
   $("d-publicar").hidden = ocupado || r.fase === "error" || !yo.instagram || r.publicaciones.length > 0;
-  $("d-aplicar").textContent = ocupado ? "Rendering…" : "Render this version";
+  $("d-aplicar").textContent = t(ocupado ? "haciendo" : "aplicar");
 }
 
 // --- Estudio de marca --------------------------------------------------------------------
@@ -262,20 +253,20 @@ function productoPrevio() {
 
 function pintarCuadro() {
   if (!yo) return;
-  const m = yo.marca, t = tema(m), [tamano, interlinea] = ESCALA_PREVIA[m.fuente];
+  const m = yo.marca, aspecto = tema(m), [tamano, interlinea] = ESCALA_PREVIA[m.fuente];
   const css = FUENTES.find(f => f.id === m.fuente).css.split(" ");
   const cuadro = $("cuadro"); cuadro.textContent = "";
-  cuadro.style.background = t.fondo || "#333";
-  if (!t.fondo) {
+  cuadro.style.background = aspecto.fondo || "#333";
+  if (!aspecto.fondo) {
     const f = crear("div", { className: "fondo" }); f.style.backgroundImage = `url(${productoPrevio()})`;
     cuadro.append(f);
   }
-  const frase = crear("div", { className: "frase" }, crear("b", { textContent: "NEW THIS WEEK" }), crear("b", { textContent: "$45.000" }));
-  frase.style.cssText = `font-family:${css.slice(2).join(" ")};font-weight:${css[0]};font-size:${tamano}px;line-height:${interlinea};color:${t.texto}`;
-  frase.lastChild.style.color = t.acento;
+  const frase = crear("div", { className: "frase" }, crear("b", { textContent: t("previa_frase") }), crear("b", { textContent: "$45.000" }));
+  frase.style.cssText = `font-family:${css.slice(2).join(" ")};font-weight:${css[0]};font-size:${tamano / 3.04}cqw;line-height:${interlinea};color:${aspecto.texto}`;
+  frase.lastChild.style.color = aspecto.acento;
   cuadro.append(frase, crear("img", { className: "producto", src: productoPrevio(), alt: "" }));
   if (m.logo) cuadro.append(crear("img", { className: "marca-logo", src: "/portal/marca/logo?" + (pintarCuadro.vez || 0), alt: "" }));
-  $("cuadro-pie").textContent = `${PISTAS.find(p => p.id === m.musica).nombre} music`;
+  $("cuadro-pie").textContent = t("previa_musica", { pista: t("pista_" + m.musica) });
 }
 
 function pintarLogo(e) {
@@ -293,12 +284,12 @@ function cambiarMarca(campo, valor, redibujar) {
   yo.marca[campo] = valor;
   if (redibujar) refrescarEstudio(); else pintarCuadro();
   clearTimeout(cambiarMarca.espera);
-  $("guardado").textContent = "Saving…";
+  $("guardado").textContent = t("guardando");
   cambiarMarca.espera = setTimeout(async () => {
     const { estilo, fuente, primario, secundario, musica } = yo.marca;
     try {
       pintarPasos(await pedir("/api/portal/marca", "POST", { estilo, fuente, primario, secundario, musica }));
-      $("guardado").textContent = "Saved. New Reels will use this.";
+      $("guardado").textContent = t("guardado");
     } catch (e) { $("guardado").textContent = ""; avisar(e.message); }
   }, 500);
 }
@@ -312,9 +303,9 @@ async function subir(ruta, archivo) {
 
 function modo(registro) {
   registrando = registro;
-  $("titulo-acceso").textContent = registro ? "Create your account" : "Sign in";
-  $("enviar").textContent = registro ? "Create account" : "Sign in";
-  $("cambiar-modo").textContent = registro ? "I already have an account" : "Create an account";
+  $("titulo-acceso").textContent = t(registro ? "crear_cuenta_titulo" : "entrar_titulo");
+  $("enviar").textContent = t(registro ? "crear_cuenta" : "entrar");
+  $("cambiar-modo").textContent = t(registro ? "ya_tengo" : "no_tengo");
   $("solo-registro").hidden = $("solo-registro2").hidden = !registro;
 }
 
@@ -325,11 +316,13 @@ $("formulario").onsubmit = async ev => {
   ev.preventDefault();
   const base = { correo: $("correo").value, clave: $("clave").value };
   const e = await hacer(() => registrando
-    ? pedir("/api/portal/registro", "POST", { ...base, nombre: $("nombre").value, idioma: $("idioma").value })
+    ? pedir("/api/portal/registro", "POST", { ...base, nombre: $("nombre").value, idioma: $("idioma-wa").value })
     : pedir("/api/portal/entrar", "POST", base));
   if (e && e.nombre) iniciar();
 };
-$("salir").onclick = async () => { await fetch("/api/portal/salir", { method: "POST" }); location.href = "/"; };
+document.querySelectorAll(".salir").forEach(b => {
+  b.onclick = async () => { await fetch("/api/portal/salir", { method: "POST" }); location.href = "/"; };
+});
 $("meta-quitar").onclick = () => hacer(() => pedir("/api/portal/conexiones/instagram", "DELETE"));
 $("shop-quitar").onclick = () => hacer(() => pedir("/api/portal/conexiones/shopify", "DELETE"));
 $("shop-form").onsubmit = ev => {
@@ -357,12 +350,12 @@ $("logo-quitar").onclick = () => hacer(() => pedir("/api/portal/marca/logo", "DE
 $("pista-archivo").onchange = ev => hacer(async () => {
   const e = await subir("/api/portal/marca/musica", ev.target.files[0]);
   ev.target.value = ""; pintar(e); refrescarEstudio();
-  $("guardado").textContent = "Track saved. New Reels will use it.";
+  $("guardado").textContent = t("pista_guardada");
 });
 $("d-publicar").onclick = () => hacer(async () => {
-  $("d-publicar").disabled = true; $("d-publicar").textContent = "Publishing…";
+  $("d-publicar").disabled = true; $("d-publicar").textContent = t("publicando");
   try { await pedir(`/api/portal/reels/${reelAbierto}/publicar`, "POST"); await cargarReels(); }
-  finally { $("d-publicar").disabled = false; $("d-publicar").textContent = "Publish to Instagram"; }
+  finally { $("d-publicar").disabled = false; $("d-publicar").textContent = t("publicar_ig"); }
 });
 $("nuevo").onsubmit = ev => {
   ev.preventDefault();
@@ -381,6 +374,12 @@ $("d-aplicar").onclick = () => hacer(async () => {
   await cargarReels();
 });
 
+document.addEventListener("idioma", () => {
+  if (!yo) { modo(registrando); return; }
+  pintar(yo); refrescarEstudio(); cargarReels().catch(() => {});
+  if (reelAbierto) controles($("d-controles"), elegidoReel, (c, v) => { elegidoReel[c] = v; });
+});
+
 async function iniciar() {
   await cargarReels().catch(() => {});
   refrescarEstudio();
@@ -392,12 +391,14 @@ async function iniciar() {
   const consulta = new URLSearchParams(location.search);
   const error = consulta.get("error");
   if (error) {
-    avisar(error === "meta" ? "The connection with Facebook didn't finish. Connect Instagram again." : error);
+    avisar(error === "meta" ? t("error_meta") : error);
     history.replaceState(null, "", "/portal#conexiones");
   }
   try { pintar(await pedir("/api/portal/yo")); await iniciar(); }
   catch {
     $("acceso").hidden = false;
+    $("idioma-wa").value = idioma;
+    aplicarIdioma();
     modo(!consulta.has("entrar"));
   }
 })();
