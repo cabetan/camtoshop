@@ -1,0 +1,5 @@
+*
+!Dockerfile
+!requirements-nube.txt
+!camtoshop/**
+**/__pycache__

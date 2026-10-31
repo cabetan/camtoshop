@@ -5,6 +5,8 @@ from __future__ import annotations
 from pathlib import Path
 from typing import Literal
 
+import hmac
+import os
 import threading
 import time
 
@@ -32,7 +34,8 @@ MAX_FOTOS = 8
 app = FastAPI(title="Camtoshop")
 servicio = Servicio()
 agente = AgenteWhatsApp(servicio)
-agente.diario.arrancar()
+if not os.environ.get("K_SERVICE"):  # en Cloud Run la instancia se apaga: lo dispara Cloud Scheduler
+    agente.diario.arrancar()
 META_APP_ID = "2033143300693121"
 portal = Portal(servicio.repo_comercios, MetaOAuth(META_APP_ID, secreto("META_APP_SECRET") or ""), ConectorShopify(),
                 time.time)
@@ -137,6 +140,16 @@ async def webhook_whatsapp(request: Request):
         raise HTTPException(403, "Firma inválida")
     # Meta espera un 200 enseguida: el trabajo se hace aparte.
     threading.Thread(target=agente.recibir, args=(await request.json(),), daemon=True).start()
+    return {"ok": True}
+
+
+@app.post("/webhook/diario")
+def propuesta_diaria(request: Request):
+    """Cloud Scheduler llama cada mañana. Corre aparte para responder enseguida."""
+    clave = secreto("WA_VERIFICACION") or ""
+    if not clave or not hmac.compare_digest(request.headers.get("x-camtoshop-clave", ""), clave):
+        raise HTTPException(403, "Clave inválida")
+    threading.Thread(target=agente.diario.revisar, daemon=True).start()
     return {"ok": True}
 
 

@@ -9,6 +9,7 @@ from __future__ import annotations
 
 import io
 import json
+import os
 import shutil
 import subprocess
 import threading
@@ -22,7 +23,6 @@ from pathlib import Path
 import requests
 
 from camtoshop.adaptadores import cache
-from camtoshop.adaptadores.alineador_xlsr import AlineadorXLSR
 from camtoshop.adaptadores.config import canal_conectado, secreto
 from camtoshop.adaptadores.fotos_meta import AnalizadorFotosSpark, EscenografoMuse, GuionistaSpark, RevisorFotosSpark
 from camtoshop.adaptadores.meta_api import ClienteMeta
@@ -49,7 +49,7 @@ from camtoshop.dominio.publicacion import pie_de_instagram, publicar
 from camtoshop.dominio.reel_fotos import Guion, PuertosFotos, precio_respaldado, reel_desde_fotos
 
 RAIZ = Path(__file__).resolve().parents[2]
-DATOS = RAIZ / "datos" / "proyectos"
+DATOS = Path(os.environ.get("CAMTOSHOP_DATOS") or RAIZ / "datos") / "proyectos"
 IDIOMAS_FICHA = ["en", "es"]  # inglés primero; siempre se agrega el idioma del video
 FORMATOS_FOTO = {".jpg", ".jpeg", ".png", ".webp", ".heic"}
 LOOK_FOTOS = "fotos"
@@ -139,8 +139,10 @@ class Servicio:
         return self._cliente
 
     @property
-    def alineador(self) -> AlineadorXLSR:
+    def alineador(self):
         if self._alineador is None:
+            # Solo el modo de video lo usa, y la imagen de la nube no trae torch.
+            from camtoshop.adaptadores.alineador_xlsr import AlineadorXLSR
             self._alineador = AlineadorXLSR()
         return self._alineador
 
