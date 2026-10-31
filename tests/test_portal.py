@@ -135,3 +135,25 @@ def test_firma_vence_y_no_sirve_para_otro_proposito():
     assert verificar("k", "meta", f, 50) is None
     assert verificar("otra", "sesion", f, 50) is None
     assert verificar("k", "sesion", "", 50) is None
+
+
+def test_marca_valida_se_guarda_y_la_invalida_no():
+    portal, _, c = montar()
+    portal.guardar_marca(c, {"estilo": "color", "fuente": "poppins", "primario": "#B3261E",
+                             "secundario": "#FFE9C9", "musica": "calida"})
+    assert c.marca.estilo == "color"
+    with pytest.raises(ErrorPortal):
+        portal.guardar_marca(c, {"estilo": "color", "fuente": "comic", "primario": "#B3261E",
+                                 "secundario": "#FFE9C9", "musica": "calida"})
+    assert c.marca.fuente == "poppins"
+
+
+def test_no_se_elige_pista_propia_sin_subirla():
+    portal, _, c = montar()
+    with pytest.raises(ErrorPortal):
+        portal.guardar_marca(c, {"estilo": "impacto", "fuente": "barlow", "primario": "#FFD23F",
+                                 "secundario": "#141414", "musica": "propia"})
+    portal.registrar_pista(c, True)
+    assert c.marca.musica == "propia"
+    portal.registrar_pista(c, False)
+    assert c.marca.musica == "energia"

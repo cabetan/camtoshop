@@ -6,14 +6,16 @@ import time
 from pathlib import Path
 from urllib.parse import quote
 
-from fastapi import APIRouter, Depends, HTTPException, Request
+from fastapi import APIRouter, Depends, File, HTTPException, Request, UploadFile
 from fastapi.responses import FileResponse, RedirectResponse
 from pydantic import BaseModel, Field
 
+from camtoshop.adaptadores.archivos_marca import guardar_logo, guardar_pista
 from camtoshop.adaptadores.config import secreto
 from camtoshop.adaptadores.meta_oauth import url_de_login
 from camtoshop.adaptadores.sesion import firmar, verificar
 from camtoshop.dominio.comercio import Comercio
+from camtoshop.dominio.marca import MUSICAS, validar_marca
 from camtoshop.dominio.portal import ErrorPortal, Portal
 
 PAGINA = Path(__file__).parent / "estatico" / "portal.html"
@@ -21,6 +23,7 @@ COOKIE = "camtoshop_sesion"
 DURACION = 14 * 24 * 3600
 CONFIG_LOGIN = "1845619373423690"
 LINEA = "15550321707"
+PISTAS = Path(__file__).parents[1] / "assets" / "musica"
 
 
 class Registro(BaseModel):
@@ -44,6 +47,23 @@ class Shopify(BaseModel):
     token: str = Field(max_length=300)
 
 
+class MarcaEntrada(BaseModel):
+    estilo: str = Field(max_length=20)
+    fuente: str = Field(max_length=20)
+    primario: str = Field(max_length=7)
+    secundario: str = Field(max_length=7)
+    musica: str = Field(max_length=20)
+
+
+class EstiloDeReel(BaseModel):
+    """Lo que cambia solo en este Reel. Lo que no llega se toma del kit de marca."""
+    estilo: str | None = Field(default=None, max_length=20)
+    fuente: str | None = Field(default=None, max_length=20)
+    primario: str | None = Field(default=None, max_length=7)
+    secundario: str | None = Field(default=None, max_length=7)
+    musica: str | None = Field(default=None, max_length=20)
+
+
 def _clave() -> str:
     return secreto("CAMTOSHOP_CLAVE") or ""
 
@@ -53,7 +73,7 @@ def _origen(request: Request) -> str:
     return f"{esquema}://{request.headers.get('host', request.url.netloc)}"
 
 
-def rutas_del_portal(portal: Portal, repo, app_id: str) -> APIRouter:
+def rutas_del_portal(portal: Portal, repo, app_id: str, servicio) -> APIRouter:
     r = APIRouter()
 
     def comercio_actual(request: Request) -> Comercio:
@@ -132,6 +152,88 @@ def rutas_del_portal(portal: Portal, repo, app_id: str) -> APIRouter:
     def elegir(datos: Eleccion, c: Comercio = Depends(comercio_actual)):
         intentar(portal.elegir_cuenta, c, datos.pagina_id)
         return portal.estado(c)
+
+    # --- Marca --------------------------------------------------------------------
+
+    @r.post("/api/portal/marca")
+    def marca(datos: MarcaEntrada, c: Comercio = Depends(comercio_actual)):
+        intentar(portal.guardar_marca, c, datos.model_dump())
+        return portal.estado(c)
+
+    @r.post("/api/portal/marca/logo")
+    def subir_logo(archivo: UploadFile = File(...), c: Comercio = Depends(comercio_actual)):
+        try:
+            color = guardar_logo(archivo.file.read(), repo.archivo(c.id, "logo.png"))
+        except ValueError as e:
+            raise HTTPException(400, str(e))
+        portal.registrar_logo(c, True)
+        return {**portal.estado(c), "color_sugerido": color}
+
+    @r.delete("/api/portal/marca/logo")
+    def quitar_logo(c: Comercio = Depends(comercio_actual)):
+        portal.registrar_logo(c, False)
+        return portal.estado(c)
+
+    @r.get("/portal/marca/logo")
+    def ver_logo(c: Comercio = Depends(comercio_actual)):
+        ruta = repo.archivo(c.id, "logo.png")
+        if not c.marca.logo or not ruta.exists():
+            raise HTTPException(404, "No logo")
+        return FileResponse(ruta, headers={"Cache-Control": "no-cache"})
+
+    @r.post("/api/portal/marca/musica")
+    def subir_pista(archivo: UploadFile = File(...), c: Comercio = Depends(comercio_actual)):
+        try:
+            guardar_pista(archivo.file.read(), repo.archivo(c.id, "musica.m4a"))
+        except ValueError as e:
+            raise HTTPException(400, str(e))
+        portal.registrar_pista(c, True)
+        return portal.estado(c)
+
+    @r.get("/portal/musica/{pista}")
+    def oir_pista(pista: str, c: Comercio = Depends(comercio_actual)):
+        ruta = repo.archivo(c.id, "musica.m4a") if pista == "propia" else PISTAS / f"{pista}.m4a"
+        if pista not in MUSICAS or not ruta.exists():
+            raise HTTPException(404, "No track")
+        return FileResponse(ruta, media_type="audio/mp4")
+
+    # --- Reels ----------------------------------------------------------------------
+
+    def reel_propio(reel_id: str, c: Comercio):
+        pr = servicio.obtener(reel_id) if reel_id.replace("-", "").isalnum() else None
+        if pr is None or pr.estado.get("comercio_id") != c.id:
+            raise HTTPException(404, "Reel not found")
+        return pr
+
+    @r.get("/api/portal/reels")
+    def reels(c: Comercio = Depends(comercio_actual)):
+        return servicio.reels_de(c.id)
+
+    @r.get("/portal/reels/{reel_id}/video")
+    def video_de_reel(reel_id: str, c: Comercio = Depends(comercio_actual)):
+        pr = reel_propio(reel_id, c)
+        if "fotos" not in pr.estado.get("reels", {}):
+            raise HTTPException(404, "Still rendering")
+        return FileResponse(servicio.archivo_de_reel(pr), media_type="video/mp4")
+
+    @r.get("/portal/reels/{reel_id}/producto")
+    def producto_de_reel(reel_id: str, c: Comercio = Depends(comercio_actual)):
+        return FileResponse(servicio.recorte_de(reel_propio(reel_id, c)))
+
+    @r.post("/api/portal/reels/{reel_id}/estilo")
+    def estilo_de_reel(reel_id: str, datos: EstiloDeReel, c: Comercio = Depends(comercio_actual)):
+        pr = reel_propio(reel_id, c)
+        if pr.estado.get("fase") == "procesando" or "fotos" not in pr.estado.get("reels", {}):
+            raise HTTPException(400, "This Reel is still rendering")
+        cambios = datos.model_dump(exclude_none=True)
+        probar = {"estilo": c.marca.estilo, "fuente": c.marca.fuente, "primario": c.marca.primario,
+                  "secundario": c.marca.secundario, "musica": c.marca.musica, **cambios}
+        try:
+            validar_marca({**probar, "musica_propia": c.marca.musica_propia})
+        except ValueError as e:
+            raise HTTPException(400, str(e))
+        servicio.reestilizar(pr, cambios)
+        return {"ok": True}
 
     @r.post("/api/portal/shopify")
     def shopify(datos: Shopify, c: Comercio = Depends(comercio_actual)):

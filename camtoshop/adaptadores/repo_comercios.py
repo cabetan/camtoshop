@@ -19,6 +19,7 @@ from cryptography.fernet import Fernet
 from camtoshop.adaptadores.config import secreto
 from camtoshop.dominio.comercio import Comercio, Conexiones
 from camtoshop.dominio.conversacion import Chat
+from camtoshop.dominio.marca import Marca
 
 
 def _clave() -> bytes:
@@ -68,6 +69,7 @@ class RepoComercios:
             return None
         d = json.loads(ruta.read_text())
         d["conexiones"] = Conexiones(**d.get("conexiones", {}))
+        d["marca"] = Marca(**d.get("marca", {}))
         return Comercio(**d)
 
     def todos(self) -> list[Comercio]:
@@ -75,6 +77,12 @@ class RepoComercios:
 
     def por_correo(self, correo: str) -> Comercio | None:
         return next((c for c in self.todos() if c.correo == correo.strip().lower()), None)
+
+    # --- Archivos de marca --------------------------------------------------------
+
+    def archivo(self, comercio_id: str, nombre: str) -> Path:
+        """Ruta del logo o la pista del comercio. Puede no existir todavía."""
+        return self._comercios / f"{comercio_id}_{nombre}"
 
     # --- Tokens cifrados --------------------------------------------------------
 

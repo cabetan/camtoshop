@@ -73,6 +73,10 @@ camtoshop/
 tests/           Domain tests with fake adapters (no network, no credits)
 ```
 
+## Brand kit
+
+Each merchant sets a logo, colors, lettering, look (Bold, Color, Clean) and music in the portal. Every Reel follows them, and any Reel can be rendered again with another look without calling the AI models. The three music tracks are composed from scratch by `scripts/hacer_musica.py`, so they carry no third-party rights; merchants can upload their own. Instagram's music library is not available through the publishing API.
+
 ## What runs where
 
 The merchant flow (WhatsApp, photo and Shopify Reels, portal, daily agent) is deployed on **Cloud Run**, scaling to zero, with data on a Cloud Storage volume and Cloud Scheduler for the morning proposal. The talking-video pipeline needs local alignment models and runs in the local setup.

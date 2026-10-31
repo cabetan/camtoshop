@@ -16,6 +16,7 @@ from dataclasses import asdict, dataclass
 from typing import Callable, Protocol
 
 from camtoshop.dominio.comercio import Comercio, Conexiones, nuevo_codigo
+from camtoshop.dominio.marca import validar_marca
 
 _CORREO = re.compile(r"^[^@\s]+@[^@\s]+\.[^@\s]+$")
 _TIENDA = re.compile(r"^[a-z0-9][a-z0-9-]*\.myshopify\.com$")
@@ -103,7 +104,27 @@ class Portal:
                 "instagram": con.instagram_usuario, "pagina": con.pagina_nombre, "shopify": con.shopify_tienda,
                 "por_elegir": [{"id": x["pagina_id"], "pagina": x["pagina_nombre"], "instagram": x["instagram_usuario"]}
                                for x in self._pendientes(c)],
-                "listo": bool(con.instagram_id and c.celulares)}
+                "marca": asdict(c.marca), "listo": bool(con.instagram_id and c.celulares)}
+
+    def guardar_marca(self, c: Comercio, datos: dict) -> None:
+        """Los archivos subidos no se tocan desde aquí: solo cambian al subir o quitar el archivo."""
+        try:
+            c.marca = validar_marca({**datos, "logo": c.marca.logo, "musica_propia": c.marca.musica_propia})
+        except (TypeError, ValueError) as e:
+            raise ErrorPortal(str(e) if isinstance(e, ValueError) else "Choose one of the available options")
+        self._repo.guardar(c)
+
+    def registrar_logo(self, c: Comercio, hay: bool) -> None:
+        c.marca.logo = hay
+        self._repo.guardar(c)
+
+    def registrar_pista(self, c: Comercio, hay: bool) -> None:
+        c.marca.musica_propia = hay
+        if hay:
+            c.marca.musica = "propia"
+        elif c.marca.musica == "propia":
+            c.marca.musica = "energia"
+        self._repo.guardar(c)
 
     def codigo_de_celular(self, c: Comercio) -> str:
         codigo = nuevo_codigo(c, self._reloj())

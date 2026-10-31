@@ -3,187 +3,150 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Camtoshop Portal</title>
+<title>Camtoshop</title>
+<meta name="description" content="Your Reels, your brand. Send a product photo on WhatsApp and approve the Reel before it goes live.">
 <link rel="preconnect" href="https://fonts.googleapis.com">
-<link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@700;900&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
-<style>
-  :root {
-    --fondo: #0d0e12; --panel: #16181f; --panel2: #1d2029; --borde: #2a2e3a; --texto: #f2f3f7;
-    --suave: #9aa0b2; --acento: #ffd23f; --ok: #3ddc97; --error: #ff5d6c; --radio: 16px;
-  }
-  * { box-sizing: border-box; }
-  body { margin: 0; background: var(--fondo); color: var(--texto); font: 15px/1.5 Inter, system-ui, sans-serif; }
-  header { display: flex; align-items: center; justify-content: space-between; padding: 18px 16px; border-bottom: 1px solid var(--borde); }
-  .marca { font: 900 28px/1 "Barlow Condensed", sans-serif; text-decoration: none; color: var(--texto); }
-  .marca span { color: var(--acento); }
-  main { max-width: 640px; margin: 0 auto; padding: 32px 16px 80px; }
-  h1 { font: 900 clamp(40px, 9vw, 60px)/.95 "Barlow Condensed", sans-serif; margin: 0 0 12px; text-transform: uppercase; }
-  h1 em { font-style: normal; color: var(--acento); }
-  h2 { font: 700 22px/1.1 "Barlow Condensed", sans-serif; text-transform: uppercase; margin: 0; }
-  .lema, .nota { color: var(--suave); }
-  .nota { font-size: 13px; margin: 8px 0 0; }
-  .caja { background: var(--panel); border: 1px solid var(--borde); border-radius: var(--radio); padding: 18px; margin-top: 14px; }
-  .fila { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
-  .hecho { color: var(--ok); font-weight: 600; }
-  label { display: block; margin: 12px 0 4px; font-size: 13px; color: var(--suave); }
-  input, select { width: 100%; padding: 11px 12px; border-radius: 10px; border: 1px solid var(--borde); background: var(--panel2); color: var(--texto); font: inherit; }
-  button, .boton { display: inline-block; padding: 10px 16px; border-radius: 10px; border: 0; background: var(--acento); color: #14130c; font: 600 15px Inter, sans-serif; cursor: pointer; text-decoration: none; }
-  button.sobrio { background: none; color: var(--suave); border: 1px solid var(--borde); padding: 6px 12px; font-size: 13px; }
-  form button { margin-top: 16px; width: 100%; }
-  .aviso { margin-top: 14px; padding: 10px 14px; border-radius: 10px; background: #2b1619; color: var(--error); }
-  .codigo { font: 900 40px/1 "Barlow Condensed", sans-serif; color: var(--acento); margin: 12px 0; }
-  .celular { display: flex; justify-content: space-between; align-items: center; padding: 8px 0; border-top: 1px solid var(--borde); margin-top: 8px; }
-  .enlace { background: none; border: 0; padding: 0; color: var(--acento); font-size: 14px; font-weight: 500; width: auto; margin-top: 14px; }
-  [hidden] { display: none !important; }
-</style>
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@800;900&family=Barlow:wght@400;500;600;700&family=Caveat:wght@700&family=Playfair+Display:wght@800&family=Poppins:wght@800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/estatico/portal.css">
 </head>
 <body>
-<header><a class="marca" href="/portal">CAMTO<span>SHOP</span></a><button class="sobrio" id="salir" hidden>Sign out</button></header>
-<main>
-  <section id="acceso" hidden>
-    <h1>Your AI community manager <em>lives in WhatsApp</em></h1>
-    <p class="lema">Send a product photo. Get a Reel, a listing and ads, ready to publish to your accounts.</p>
-    <div class="caja">
-      <form id="formulario">
-        <h2 id="titulo-acceso">Create your account</h2>
-        <div id="solo-registro">
-          <label for="nombre">Business name</label><input id="nombre" autocomplete="organization">
-        </div>
-        <label for="correo">Email</label><input id="correo" type="email" required autocomplete="email">
-        <label for="clave">Password</label><input id="clave" type="password" required autocomplete="current-password">
-        <div id="solo-registro2">
-          <label for="idioma">WhatsApp language</label>
-          <select id="idioma"><option value="es">Español</option><option value="en">English</option></select>
-        </div>
-        <button id="enviar">Create account</button>
-      </form>
-      <button class="enlace" id="cambiar-modo">I already have an account</button>
-    </div>
-  </section>
-  <section id="panel" hidden>
-    <h1 id="saludo"></h1>
-    <p class="lema" id="resumen"></p>
-    <div class="caja">
-      <div class="fila"><h2>1 · Instagram + Facebook</h2><span id="meta-estado"></span></div>
-      <div id="meta-elegir"></div>
-      <p class="nota" id="meta-nota">Connect the Instagram professional account linked to your Facebook Page.</p>
-      <div class="fila" style="margin-top:12px"><a class="boton" id="meta-conectar" href="/portal/meta/iniciar">Connect Instagram</a><button class="sobrio" id="meta-quitar" hidden>Disconnect</button></div>
-    </div>
-    <div class="caja">
-      <div class="fila"><h2>2 · WhatsApp phones</h2><span id="cel-estado"></span></div>
-      <div id="celulares"></div>
-      <div id="codigo" hidden>
-        <p class="nota">Send this code to Camtoshop from the phone you'll use. It works for 30 minutes.</p>
-        <div class="codigo" id="codigo-texto"></div>
-        <a class="boton" id="codigo-enlace" target="_blank" rel="noopener">Open WhatsApp</a>
+<section id="acceso" class="acceso" hidden>
+  <div class="cartel">
+    <a class="logo" href="/">Camtoshop</a>
+    <h1>Your phone is the studio.</h1>
+    <p>Send a product photo on WhatsApp. Get a Reel in your colors, with your logo and your music. Nothing goes live until you tap Publish.</p>
+  </div>
+  <div class="entrada">
+    <form id="formulario">
+      <h2 id="titulo-acceso">Create your account</h2>
+      <div id="solo-registro">
+        <label for="nombre">Business name</label><input id="nombre" autocomplete="organization">
       </div>
-      <p style="margin:12px 0 0"><button id="cel-nuevo">Add a phone</button></p>
+      <label for="correo">Email</label><input id="correo" type="email" required autocomplete="email">
+      <label for="clave">Password</label><input id="clave" type="password" required autocomplete="current-password">
+      <div id="solo-registro2">
+        <label for="idioma">WhatsApp language</label>
+        <select id="idioma"><option value="es">Español</option><option value="en">English</option></select>
+      </div>
+      <button class="principal ancho" id="enviar">Create account</button>
+    </form>
+    <button class="enlace" id="cambiar-modo">I already have an account</button>
+    <p class="aviso" data-aviso hidden></p>
+  </div>
+</section>
+
+<div id="app" class="app" hidden>
+  <nav class="lateral" aria-label="Sections">
+    <a class="logo" href="/">Camtoshop</a>
+    <div class="pestanas">
+      <button data-vista="reels">Reels</button>
+      <button data-vista="marca">Brand</button>
+      <button data-vista="conexiones">Connections</button>
     </div>
-    <div class="caja">
-      <div class="fila"><h2>3 · Shopify <small style="color:var(--suave)">optional</small></h2><span id="shop-estado"></span></div>
-      <form id="shop-form">
-        <label for="tienda">Store address</label><input id="tienda" placeholder="your-store.myshopify.com">
-        <label for="token">Admin API token</label><input id="token" type="password" autocomplete="off">
-        <button>Connect Shopify</button>
-      </form>
-      <button class="sobrio" id="shop-quitar" style="margin-top:12px" hidden>Disconnect</button>
+    <div class="cuenta">
+      <span id="nombre-negocio"></span>
+      <button class="enlace" id="salir">Sign out</button>
     </div>
-  </section>
-  <div class="aviso" id="aviso" hidden></div>
-</main>
-<script>
-  const $ = id => document.getElementById(id);
-  let registrando = true, sondeo = null;
+  </nav>
 
-  function avisar(texto) { $("aviso").textContent = texto || ""; $("aviso").hidden = !texto; }
+  <main>
+    <p class="aviso" data-aviso hidden></p>
 
-  async function pedir(ruta, metodo = "GET", datos) {
-    const r = await fetch(ruta, { method: metodo, headers: datos ? { "Content-Type": "application/json" } : {},
-                                  body: datos ? JSON.stringify(datos) : undefined });
-    const cuerpo = await r.json().catch(() => ({}));
-    if (!r.ok) throw Object.assign(new Error(typeof cuerpo.detail === "string" ? cuerpo.detail : "Something went wrong"), { estado: r.status });
-    return cuerpo;
-  }
-  async function hacer(accion) {
-    avisar("");
-    try { const e = await accion(); if (e && e.nombre) pintar(e); } catch (e) { avisar(e.message); }
-  }
+    <section id="v-reels" hidden>
+      <div class="encabezado">
+        <h1>Reels</h1>
+        <a class="principal" id="hacer-reel" target="_blank" rel="noopener">Make a Reel on WhatsApp</a>
+      </div>
+      <div id="pasos" class="pasos" hidden></div>
+      <div id="reels" class="rejilla"></div>
+      <div id="sin-reels" class="vacio" hidden>
+        <h2>Your first Reel starts with one photo</h2>
+        <p>Send a product photo to Camtoshop on WhatsApp and say what it is and what it costs. The Reel appears here in about four minutes.</p>
+      </div>
+    </section>
 
-  function pintar(e) {
-    $("acceso").hidden = true; $("panel").hidden = false; $("salir").hidden = false;
-    $("saludo").textContent = e.nombre;
-    $("resumen").textContent = e.listo ? "You're all set. Send a product photo to Camtoshop on WhatsApp."
-                                       : "Two steps and your photos become content.";
-    $("meta-estado").textContent = e.instagram ? "✓ @" + e.instagram : "";
-    $("meta-estado").className = "hecho";
-    $("meta-nota").textContent = e.instagram ? "Publishing through " + e.pagina + "."
-      : "Connect the Instagram professional account linked to your Facebook Page.";
-    $("meta-conectar").hidden = !!e.instagram || e.demo;
-    $("meta-quitar").hidden = !e.instagram || e.demo;
-    const elegir = $("meta-elegir"); elegir.textContent = "";
-    e.por_elegir.forEach(c => {
-      const b = document.createElement("button");
-      b.className = "sobrio"; b.style.margin = "10px 8px 0 0"; b.textContent = "@" + c.instagram + " · " + c.pagina;
-      b.onclick = () => hacer(() => pedir("/api/portal/cuenta", "POST", { pagina_id: c.id }));
-      elegir.append(b);
-    });
-    $("cel-estado").textContent = e.celulares.length ? "✓ " + e.celulares.length : ""; $("cel-estado").className = "hecho";
-    const lista = $("celulares"); lista.textContent = "";
-    e.celulares.forEach(n => {
-      const fila = document.createElement("div"); fila.className = "celular";
-      const texto = document.createElement("span"); texto.textContent = "+" + n;
-      const quitar = document.createElement("button"); quitar.className = "sobrio"; quitar.textContent = "Remove";
-      quitar.onclick = () => hacer(async () => { await pedir("/api/portal/celulares/" + n, "DELETE"); return pedir("/api/portal/yo"); });
-      fila.append(texto, quitar); lista.append(fila);
-    });
-    $("shop-estado").textContent = e.shopify ? "✓ " + e.shopify : ""; $("shop-estado").className = "hecho";
-    $("shop-form").hidden = !!e.shopify || e.demo; $("shop-quitar").hidden = !e.shopify || e.demo;
-    if (sondeo && e.celulares.length > sondeo.antes) {
-      clearInterval(sondeo.id); sondeo = null; $("codigo").hidden = true;
-    }
-  }
+    <section id="v-detalle" hidden>
+      <button class="enlace volver" id="volver">All Reels</button>
+      <div class="detalle">
+        <div class="pantalla"><video id="video" controls playsinline></video></div>
+        <div class="ajustes">
+          <h1 id="d-nombre"></h1>
+          <p id="d-estado" class="nota"></p>
+          <div id="d-publicado"></div>
+          <div id="d-controles"></div>
+          <button class="principal ancho" id="d-aplicar">Render this version</button>
+          <p class="nota">Takes about a minute. The new version goes to your WhatsApp for approval.</p>
+        </div>
+      </div>
+    </section>
 
-  function modo(registro) {
-    registrando = registro;
-    $("titulo-acceso").textContent = registro ? "Create your account" : "Sign in";
-    $("enviar").textContent = registro ? "Create account" : "Sign in";
-    $("cambiar-modo").textContent = registro ? "I already have an account" : "Create an account";
-    $("solo-registro").hidden = $("solo-registro2").hidden = !registro;
-  }
+    <section id="v-marca" hidden>
+      <div class="encabezado">
+        <h1>Your brand</h1>
+        <span class="nota" id="guardado" aria-live="polite"></span>
+      </div>
+      <div class="estudio">
+        <div class="controles">
+          <fieldset>
+            <legend>Logo</legend>
+            <div class="fila-logo">
+              <img id="logo-vista" alt="Your logo" hidden>
+              <label class="secundario" for="logo-archivo">Upload logo</label>
+              <input id="logo-archivo" class="oculto" type="file" accept="image/png,image/jpeg,image/webp">
+              <button class="enlace" id="logo-quitar" hidden>Remove</button>
+            </div>
+            <p class="nota">A PNG with a transparent background works best. It goes at the top of every Reel.</p>
+          </fieldset>
+          <div id="m-controles"></div>
+          <fieldset>
+            <legend>Your own music</legend>
+            <label class="secundario" for="pista-archivo">Upload a track</label>
+            <input id="pista-archivo" class="oculto" type="file" accept="audio/mpeg,audio/mp4,audio/x-m4a,audio/aac,audio/wav">
+            <p class="nota">Only upload music you have the rights to use. Instagram's music library isn't available to outside apps, so you can also add a song from the Instagram app after publishing.</p>
+          </fieldset>
+        </div>
+        <div class="vista-previa">
+          <div class="telefono" id="telefono"><div id="cuadro" class="cuadro"></div></div>
+          <p class="nota" id="cuadro-pie"></p>
+        </div>
+      </div>
+    </section>
 
-  $("cambiar-modo").onclick = () => modo(!registrando);
-  $("formulario").onsubmit = ev => {
-    ev.preventDefault();
-    const base = { correo: $("correo").value, clave: $("clave").value };
-    hacer(() => registrando
-      ? pedir("/api/portal/registro", "POST", { ...base, nombre: $("nombre").value, idioma: $("idioma").value })
-      : pedir("/api/portal/entrar", "POST", base));
-  };
-  $("salir").onclick = async () => { await fetch("/api/portal/salir", { method: "POST" }); location.href = "/portal"; };
-  $("meta-quitar").onclick = () => hacer(() => pedir("/api/portal/conexiones/instagram", "DELETE"));
-  $("shop-quitar").onclick = () => hacer(() => pedir("/api/portal/conexiones/shopify", "DELETE"));
-  $("shop-form").onsubmit = ev => {
-    ev.preventDefault();
-    hacer(async () => {
-      const e = await pedir("/api/portal/shopify", "POST", { tienda: $("tienda").value, token: $("token").value });
-      $("token").value = ""; return e;
-    });
-  };
-  $("cel-nuevo").onclick = () => hacer(async () => {
-    const r = await pedir("/api/portal/codigo", "POST");
-    $("codigo-texto").textContent = r.codigo; $("codigo-enlace").href = r.enlace; $("codigo").hidden = false;
-    const e = await pedir("/api/portal/yo");
-    if (sondeo) clearInterval(sondeo.id);
-    sondeo = { antes: e.celulares.length, id: setInterval(() => pedir("/api/portal/yo").then(pintar).catch(() => {}), 4000) };
-    return e;
-  });
-
-  (async () => {
-    const error = new URLSearchParams(location.search).get("error");
-    if (error) { avisar(error === "meta" ? "The connection with Facebook didn't finish. Please try again." : error); history.replaceState(null, "", "/portal"); }
-    try { pintar(await pedir("/api/portal/yo")); }
-    catch { $("acceso").hidden = false; modo(true); }
-  })();
-</script>
+    <section id="v-conexiones" hidden>
+      <h1>Connections</h1>
+      <div class="conexion">
+        <div><h2>Instagram</h2><p class="nota" id="meta-nota"></p><div id="meta-elegir"></div></div>
+        <div class="accion"><a class="principal" id="meta-conectar" href="/portal/meta/iniciar">Connect Instagram</a><button class="secundario" id="meta-quitar" hidden>Disconnect</button></div>
+      </div>
+      <div class="conexion">
+        <div>
+          <h2>WhatsApp phones</h2>
+          <p class="nota">Everyone who sends products or approves Reels needs their phone here.</p>
+          <div id="celulares"></div>
+          <div id="codigo" hidden>
+            <p class="nota">Send this code to Camtoshop from the phone you'll use. It works for 30 minutes.</p>
+            <div class="codigo" id="codigo-texto"></div>
+            <a class="whatsapp" id="codigo-enlace" target="_blank" rel="noopener">Open WhatsApp</a>
+          </div>
+        </div>
+        <div class="accion"><button class="principal" id="cel-nuevo">Add a phone</button></div>
+      </div>
+      <div class="conexion">
+        <div>
+          <h2>Shopify</h2>
+          <p class="nota" id="shop-nota">Optional. New products become drafts in your store, and the daily agent can suggest what to promote.</p>
+          <form id="shop-form">
+            <label for="tienda">Store address</label><input id="tienda" placeholder="your-store.myshopify.com">
+            <label for="token">Admin API token</label><input id="token" type="password" autocomplete="off">
+            <button class="secundario">Connect Shopify</button>
+          </form>
+        </div>
+        <div class="accion"><button class="secundario" id="shop-quitar" hidden>Disconnect</button></div>
+      </div>
+    </section>
+  </main>
+</div>
+<script src="/estatico/portal.js"></script>
 </body>
 </html>

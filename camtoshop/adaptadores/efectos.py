@@ -12,6 +12,9 @@ ANCHO, ALTO, FPS = 1080, 1920, 30
 FUENTES = Path(__file__).resolve().parents[1] / "assets" / "fonts"
 NEGRA = FUENTES / "BarlowCondensed-Black.ttf"
 AMARILLO = "#FFD23F"
+TIPOGRAFIAS = {"barlow": (NEGRA, 0.9, 1.0), "playfair": (FUENTES / "PlayfairDisplay-ExtraBold.ttf", 1.12, 0.62),
+               "poppins": (FUENTES / "Poppins-ExtraBold.ttf", 1.12, 0.6),
+               "caveat": (FUENTES / "Caveat-Bold.ttf", 0.95, 0.85)}  # ruta, interlínea, escala
 
 
 def fuente_que_cabe(texto: str, ruta: Path, maximo: int, ancho: float) -> ImageFont.FreeTypeFont:
@@ -50,14 +53,16 @@ def ubicar_texto(lineas: list[str], sujeto: np.ndarray, maximo_tapado: float = 0
 
 
 def dibujar_lineas(lienzo: ImageDraw.ImageDraw, lineas: list[str], y: float, escala: float = 1.0,
-                   colores: tuple[str, ...] = ("white", AMARILLO, "white"), sombra: bool = False) -> None:
+                   colores: tuple[str, ...] = ("white", AMARILLO, "white"), sombra: bool = False,
+                   tipografia: str = "barlow") -> None:
+    ruta, interlinea, proporcion = TIPOGRAFIAS[tipografia]
     for linea, color in zip(lineas, colores):
-        fuente = fuente_que_cabe(linea, NEGRA, int(380 * escala), ANCHO * 0.92 * escala)
+        fuente = fuente_que_cabe(linea, ruta, int(380 * escala * proporcion), ANCHO * 0.92 * escala)
         x = (ANCHO - fuente.getlength(linea)) / 2
         if sombra:
             lienzo.text((x + 6, y + 8), linea, font=fuente, fill=(0, 0, 0, 140))
         lienzo.text((x, y), linea, font=fuente, fill=color)
-        y += fuente.size * 0.9
+        y += fuente.size * interlinea
 
 
 def texto_detras(cuadros: list[Path], sujetos: dict[int, np.ndarray], lineas: list[str], destino: Path) -> Path:

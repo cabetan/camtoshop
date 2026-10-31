@@ -11,6 +11,8 @@ import re
 import secrets
 from dataclasses import dataclass, field
 
+from camtoshop.dominio.marca import Marca
+
 VIGENCIA_CODIGO = 30 * 60  # segundos
 LIMITE_DIARIO = 15  # Reels por comercio y día: protege los créditos y frena abusos
 _CODIGO = re.compile(r"\bCAMTO[- ]?(\d{4})\b", re.I)
@@ -39,6 +41,7 @@ class Comercio:
     celulares: list[str] = field(default_factory=list)
     codigos: dict[str, float] = field(default_factory=dict)  # código → vence (epoch)
     conexiones: Conexiones = field(default_factory=Conexiones)
+    marca: Marca = field(default_factory=Marca)
     usos: dict[str, int] = field(default_factory=dict)  # "AAAA-MM-DD" → Reels pedidos
     promovidos: dict[str, str] = field(default_factory=dict)  # producto → último día que se promovió
     ultima_propuesta: str = ""  # día de la última propuesta del agente diario

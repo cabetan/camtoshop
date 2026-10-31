@@ -17,7 +17,7 @@ import time
 import traceback
 import uuid
 from concurrent.futures import ThreadPoolExecutor
-from dataclasses import asdict
+from dataclasses import asdict, replace
 from pathlib import Path
 
 import requests
@@ -46,13 +46,15 @@ from camtoshop.dominio.producto import (
     normalizar_ficha, precio_valido,
 )
 from camtoshop.dominio.publicacion import pie_de_instagram, publicar
-from camtoshop.dominio.reel_fotos import Guion, PuertosFotos, precio_respaldado, reel_desde_fotos
+from camtoshop.dominio.marca import Marca, tema_de
+from camtoshop.dominio.reel_fotos import Guion, PuertosFotos, armar_tomas, precio_respaldado, reel_desde_fotos
 
 RAIZ = Path(__file__).resolve().parents[2]
 DATOS = Path(os.environ.get("CAMTOSHOP_DATOS") or RAIZ / "datos") / "proyectos"
 IDIOMAS_FICHA = ["en", "es"]  # inglés primero; siempre se agrega el idioma del video
 FORMATOS_FOTO = {".jpg", ".jpeg", ".png", ".webp", ".heic"}
 LOOK_FOTOS = "fotos"
+PISTAS = RAIZ / "camtoshop" / "assets" / "musica"
 
 
 def ficha_a_json(f: Ficha) -> dict:
@@ -326,16 +328,28 @@ class Servicio:
 
     # --- Reel desde fotos ---------------------------------------------------------
 
-    def _render_fotos(self, analisis: Analisis | None = None) -> RenderizadorFotos:
+    def _marca_de(self, pr: Proyecto | None) -> tuple[Marca, str]:
+        """La marca del comercio, con lo que se haya cambiado solo para este Reel."""
+        comercio = self.repo_comercios.obtener(pr.estado.get("comercio_id", "")) if pr else None
+        marca = comercio.marca if comercio else Marca()
+        return replace(marca, **(pr.estado.get("marca_reel") or {}) if pr else {}), comercio.id if comercio else ""
+
+    def _render_fotos(self, analisis: Analisis | None = None, pr: Proyecto | None = None) -> RenderizadorFotos:
         c = self.cliente
         conceptos = (analisis.conceptos_sam if analisis else []) + ["product"]
+        marca, comercio_id = self._marca_de(pr)
+        logo = self.repo_comercios.archivo(comercio_id, "logo.png") if marca.logo else None
+        if marca.musica == "propia":
+            musica = self.repo_comercios.archivo(comercio_id, "musica.m4a")
+        else:
+            musica = None if marca.musica == "ninguna" else PISTAS / f"{marca.musica}.m4a"
         return RenderizadorFotos(lambda concepto, img, fuente, salida: mascaras(c, concepto, img, fuente, salida),
-                                 conceptos)
+                                 conceptos, tema_de(marca), logo, musica)
 
     def _puertos_fotos(self, pr: Proyecto, analisis: Analisis) -> PuertosFotos:
         c = self.cliente
         return PuertosFotos(GuionistaSpark(c), EscenografoMuse(c, pr.ruta("trabajo") / "escenas"),
-                            self._render_fotos(analisis), RevisorFotosSpark(c))
+                            self._render_fotos(analisis, pr), RevisorFotosSpark(c))
 
     def _voz(self, pr: Proyecto) -> Path | None:
         return next(pr.ruta("material").glob("voz.*"), None)
@@ -418,6 +432,58 @@ class Servicio:
                              pr.ruta(f"reel_fotos_{int(time.time())}.mp4"), self._puertos_fotos(pr, analisis),
                              lambda t: pr.paso(t), pedido=pedido, anterior=anterior, rondas=0)
         self._guardar_reel_fotos(pr, r)
+
+    def reestilizar(self, pr: Proyecto, cambios: dict):
+        """Mismo guion, otro aspecto: no gasta IA y el Reel nuevo pide aprobación como cualquier otro."""
+        pr.guardar(fase="procesando", progreso=50, marca_reel=cambios)
+        self._cola.submit(self._reestilo, pr)
+
+    def _reestilo(self, pr: Proyecto):
+        try:
+            trabajo = pr.ruta("trabajo")
+            analisis = Analisis(**pr.estado["analisis"])
+            p = self._puertos_fotos(pr, analisis)
+            render = p.renderizador
+            fotos = [render.preparar(pr.ruta("material") / n, trabajo) for n in pr.estado["fotos_material"]]
+            recortes = [render.recorte(f, trabajo) for f in fotos]
+            guardado = pr.estado["reels"][LOOK_FOTOS]
+            guion = Guion(**guardado["guion"])
+            reales = [r for r in recortes if r is not None]
+            escenas = [p.escenografo.escena(d, reales[0]) for d in guion.escenas[:len(guion.beneficios) // 2]] if reales else []
+            voz = self._voz(pr)
+            duracion = guardado["duracion"] - 0.6 if voz else None
+            tomas = armar_tomas(guion, len(fotos), len(escenas), ficha_de_json(pr.estado["ficha"]).precio, duracion)
+            destino = pr.ruta(f"reel_fotos_{int(time.time())}.mp4")
+            render.render(tomas, fotos, recortes, escenas, voz, destino, analisis.nombre)
+            pr.guardar(reels={**pr.estado["reels"], LOOK_FOTOS: {**guardado, "archivo": pr.relativa(destino)}})
+            pr.guardar(fase="listo", progreso=100)
+        except Exception as e:
+            pr.guardar(fase="error", error=f"{e}", detalle_error=traceback.format_exc()[-2000:])
+
+    def reels_de(self, comercio_id: str) -> list[dict]:
+        salida = []
+        for carpeta in sorted(self._datos.iterdir(), reverse=True):
+            if not (carpeta / "estado.json").exists():
+                continue
+            pr = Proyecto(carpeta)
+            e = pr.estado
+            if e.get("comercio_id") != comercio_id or e.get("tipo") != "fotos":
+                continue
+            analisis = e.get("analisis") or {}
+            salida.append({"id": e["id"], "fase": e["fase"], "creado": e.get("creado"),
+                           "nombre": analisis.get("nombre") or e.get("texto", "")[:50],
+                           "tiene_video": LOOK_FOTOS in e.get("reels", {}), "error": e.get("error", ""),
+                           "marca": e.get("marca_reel") or {},
+                           "publicaciones": [{"canal": r["canal"], "url": r.get("url", "")}
+                                             for x in e.get("publicaciones", []) for r in x["resultados"] if r["ok"]]})
+        return salida
+
+    def archivo_de_reel(self, pr: Proyecto) -> Path:
+        return pr.ruta(pr.estado["reels"][LOOK_FOTOS]["archivo"])
+
+    def recorte_de(self, pr: Proyecto) -> Path:
+        recorte = next(iter(sorted(pr.ruta("trabajo").glob("*_recorte.png"))), None)
+        return recorte or pr.ruta("material") / pr.estado["fotos_material"][0]
 
     def _renderizador_basico(self) -> RenderizadorFFmpeg:
         return RenderizadorFFmpeg(RAIZ / "videos" / "maestros", lambda *a: {}, [])
