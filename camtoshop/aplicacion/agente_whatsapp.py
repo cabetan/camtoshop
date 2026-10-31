@@ -17,6 +17,7 @@ from camtoshop.adaptadores.whatsapp import ClienteWhatsApp, mensajes_del_webhook
 from camtoshop.aplicacion.agente_diario import AgenteDiario
 from camtoshop.aplicacion.servicio import Proyecto, Servicio
 from camtoshop.dominio.comercio import comercio_de, vincular
+from camtoshop.dominio.publicacion import canales_de_destino
 from camtoshop.dominio.conversacion import (
     CrearDesdeFotos, CrearDesdeProducto, CrearDesdeVideo, Mensaje, OtraPropuesta, PedirCambio, Publicar, Responder,
     atender, botones, fallo, listo_para_aprobar, t,
@@ -110,7 +111,8 @@ class AgenteWhatsApp:
                 self.wa.texto(celular, t(comercio, "sin_otro"))
         elif isinstance(accion, Publicar):
             pr = self._servicio.obtener(accion.proyecto)
-            canales = [k for k, v in self._servicio.canales_de(comercio).items() if v]
+            canales = canales_de_destino(pr.estado.get("origen", ""),
+                                         [k for k, v in self._servicio.canales_de(comercio).items() if v])
             resultados = self._servicio.publicar(pr, canales, comercio)
             self.wa.texto(celular, self._resumen(resultados))
         elif isinstance(accion, PedirCambio):

@@ -66,6 +66,11 @@ def pie_de_instagram(ficha: Ficha, gancho: str = "") -> str:
     return pie[:LIMITE_PIE]
 
 
+def canales_de_destino(origen: str, conectados: list[str]) -> list[str]:
+    """Un producto que ya vive en la tienda no se vuelve a crear: solo va a las redes."""
+    return [c for c in conectados if c == "instagram"] if origen == "shopify" else conectados
+
+
 def publicar(ficha: Ficha, reel: Path | None, portada: Path | None, canales: list[str],
              tienda: Tienda | None, catalogo: Catalogo | None, red: RedSocial | None,
              gancho: str = "") -> list[Resultado]:

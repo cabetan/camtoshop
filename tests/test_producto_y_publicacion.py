@@ -130,3 +130,10 @@ def test_elegir_para_reel_descarta_sin_foto_sin_precio_o_borrador():
     elegidos = elegir_para_reel(productos)
     assert len(elegidos) == 6 and all(p.handle == "a" for p in elegidos)
     assert [p.handle for p in elegir_para_reel(productos[1:4], incluir_borradores=True)] == ["d"]
+
+
+def test_producto_de_la_tienda_solo_va_a_las_redes():
+    from camtoshop.dominio.publicacion import canales_de_destino
+    todos = ["shopify", "catalogo_meta", "instagram"]
+    assert canales_de_destino("shopify", todos) == ["instagram"]
+    assert canales_de_destino("whatsapp", todos) == todos
