@@ -57,7 +57,7 @@ def test_anuncios_uno_por_angulo_y_dentro_de_limites():
 def test_pie_de_instagram_tiene_precio_llamado_y_etiquetas():
     pie = pie_de_instagram(ficha(), "La vela que relaja tu hogar")
     assert pie.startswith("La vela que relaja tu hogar")
-    assert "$85.000" in pie and "biografía" in pie
+    assert "$85.000" in pie and "DM" in pie and "biografía" not in pie
     assert "#HechoEnMedellín" in pie and pie.count("#Velas") == 1
 
 
@@ -137,3 +137,8 @@ def test_producto_de_la_tienda_solo_va_a_las_redes():
     todos = ["shopify", "catalogo_meta", "instagram"]
     assert canales_de_destino("shopify", todos) == ["instagram"]
     assert canales_de_destino("whatsapp", todos) == todos
+
+
+def test_el_pie_usa_el_texto_que_vende_el_reel():
+    pie = pie_de_instagram(ficha(), "¿Tu casa pide calidez?", ["Regalo que emociona"], "Escríbenos ahora")
+    assert "Regalo que emociona" in pie and "Escríbenos ahora" in pie

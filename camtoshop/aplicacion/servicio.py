@@ -695,4 +695,6 @@ class Servicio:
         return resultados
 
     def pie(self, pr: Proyecto) -> str:
-        return pie_de_instagram(ficha_de_json(pr.estado["ficha"]), (pr.estado.get("analisis") or {}).get("gancho", ""))
+        guion = (pr.estado.get("reels", {}).get(LOOK_FOTOS) or {}).get("guion") or {}  # el mismo texto que vende en el Reel
+        return pie_de_instagram(ficha_de_json(pr.estado["ficha"]), guion.get("gancho") or (pr.estado.get("analisis") or {}).get("gancho", ""),
+                                guion.get("beneficios"), guion.get("llamado", ""))

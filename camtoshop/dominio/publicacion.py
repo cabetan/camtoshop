@@ -44,15 +44,15 @@ class RedSocial(Protocol):
     def publicar_reel(self, video: Path, pie: str, portada: Path | None) -> str: ...
 
 
-def pie_de_instagram(ficha: Ficha, gancho: str = "") -> str:
+def pie_de_instagram(ficha: Ficha, gancho: str = "", puntos: list[str] | None = None, llamado: str = "") -> str:
     """Texto del Reel: gancho, beneficios, precio, llamado y etiquetas, dentro de los límites de Instagram."""
     t = ficha.principal
     espanol = ficha.idioma.startswith("es")
     lineas = [gancho or t.titulo, ""]
-    lineas += [f"✨ {p}" for p in t.puntos[:3]]
+    lineas += [f"✨ {p}" for p in (puntos or t.puntos)[:3]]
     if ficha.precio:
         lineas += ["", f"{'Precio' if espanol else 'Price'}: {ficha.precio.texto()}"]
-    lineas.append("🛒 " + ("Compra en el enlace de la biografía" if espanol else "Shop via the link in bio"))
+    lineas.append("🛒 " + (llamado or ("Escríbenos por DM para comprarlo" if espanol else "Send us a DM to order")))
     etiquetas = []
     for e in ficha.etiquetas + [ficha.marca, ficha.categoria]:
         limpia = "".join(ch for ch in e.title() if ch.isalnum())
