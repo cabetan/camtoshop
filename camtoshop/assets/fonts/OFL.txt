@@ -1,4 +1,7 @@
 Copyright 2017 The Barlow Project Authors (https://github.com/jpt/barlow)
+Copyright 2014 The Caveat Project Authors (https://github.com/googlefonts/caveat)
+Copyright 2017 The Playfair Display Project Authors (https://github.com/clauseggers/Playfair-Display)
+Copyright 2020 The Poppins Project Authors (https://github.com/itfoundry/Poppins)
 
 This Font Software is licensed under the SIL Open Font License, Version 1.1.
 This license is copied below, and is also available with a FAQ at:

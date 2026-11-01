@@ -45,9 +45,9 @@ class AnalizadorFotosSpark:
 ESQUEMA_GUION = {
     "type": "object",
     "properties": {
-        "gancho": {"type": "string", "description": "max 6 words; a question or bold promise that stops the scroll"},
+        "gancho": {"type": "string", "description": "max 6 words; the reason someone would want this, as a bold promise or a question about their life"},
         "beneficios": {"type": "array", "items": {"type": "string"},
-                       "description": "exactly 3 benefits, 2-4 words each, concrete"},
+                       "description": "exactly 3 selling lines, 2-4 words each: what the buyer gets, feels or solves"},
         "llamado": {"type": "string", "description": "call to action, max 4 words"},
         "escenas": {"type": "array", "items": {"type": "string"},
                     "description": "2 short English descriptions of a realistic place where this product is used"},
@@ -59,7 +59,10 @@ ESQUEMA_GUION = {
 REGLAS_GUION = (
     "Rules: on-screen text in {idioma}; only facts from the merchant's message and the photos; never invent "
     "free shipping, warranties, discounts, certifications or 'organic'; do not write the price (it is added "
-    "separately from the merchant's own number); numbers in digits; no emojis, no hashtags.")
+    "separately from the merchant's own number); numbers in digits; no emojis, no hashtags. "
+    "Sell, don't describe: the viewer already sees the product, so never name its color, shape, parts or printed "
+    "text. Bad: 'Green vase with handle'. Good: 'Your table, finished'. Write what it does for the buyer's day, "
+    "home or gift, always consistent with the facts given.")
 
 
 class GuionistaSpark:

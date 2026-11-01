@@ -66,6 +66,7 @@ function pintar(e) {
   $("nombre-negocio").textContent = e.nombre;
   aplicarIdioma();
   $("hacer-reel").href = `https://wa.me/${LINEA}`;
+  $("hacer-reel").hidden = !e.celulares.length;  // la línea de prueba solo responde a celulares vinculados
   pintarPasos(e); pintarConexiones(e); pintarLogo(e); pintarCuadro();
   if (sondeo && e.celulares.length > sondeo.antes) { clearInterval(sondeo.id); sondeo = null; $("codigo").hidden = true; }
 }

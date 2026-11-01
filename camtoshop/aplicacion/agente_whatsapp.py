@@ -109,7 +109,7 @@ class AgenteWhatsApp:
             chat = self._repo.chat(celular)
             fallo(chat)
             self._repo.guardar_chat(chat)
-            self.wa.texto(celular, t(comercio, "error", error=str(e)[:200]))
+            self.wa.texto(celular, t(comercio, "error"))
 
     def _ejecutar(self, accion, celular: str, comercio):
         if isinstance(accion, Responder):
@@ -139,12 +139,13 @@ class AgenteWhatsApp:
             canales = canales_de_destino(pr.estado.get("origen", ""),
                                          [k for k, v in self._servicio.canales_de(comercio).items() if v])
             resultados = self._servicio.publicar(pr, canales, comercio)
-            self.wa.texto(celular, self._resumen(resultados))
-            if resultados and not any(r["ok"] for r in resultados):
+            if resultados:
+                self.wa.texto(celular, self._resumen(resultados))
+            if not any(r["ok"] for r in resultados):
                 chat = self._repo.chat(celular)  # la aprobación sigue viva: nada salió
                 listo_para_aprobar(chat, pr.id, accion.version)
                 self._repo.guardar_chat(chat)
-                self.wa.texto(celular, t(comercio, "reintentar"))
+                self.wa.texto(celular, t(comercio, "reintentar" if resultados else "sin_canales"))
         elif isinstance(accion, PedirCambio):
             pr = self._servicio.obtener(accion.proyecto)
             if pr is None or pr.estado.get("comercio_id") != comercio.id:
@@ -176,7 +177,7 @@ class AgenteWhatsApp:
                               (f"\n   {r['detalle']}" if r.get("detalle") else ""))
             else:
                 lineas.append(f"⚠️ {nombre}: {r['detalle']}")
-        return "\n".join(lineas) or "No hay canales conectados: conéctalos en el portal."
+        return "\n".join(lineas)
 
     # --- Salida: el Reel terminó ------------------------------------------------------
 
@@ -190,7 +191,7 @@ class AgenteWhatsApp:
             try:
                 if pr.estado["fase"] == "error":
                     fallo(chat)
-                    self.wa.texto(celular, t(comercio, "error", error=pr.estado.get("error", "")[:200]))
+                    self.wa.texto(celular, t(comercio, "error"))
                     return
                 version = version_de(pr)
                 listo_para_aprobar(chat, pr.id, version)
@@ -200,6 +201,6 @@ class AgenteWhatsApp:
             except Exception as e:
                 traceback.print_exc()
                 fallo(chat)
-                self.wa.texto(celular, t(comercio, "error", error=str(e)[:200]))
+                self.wa.texto(celular, t(comercio, "error"))
             finally:
                 self._repo.guardar_chat(chat)

@@ -27,6 +27,8 @@ No app to learn, no filming, no editor: the merchant already knows how to use Wh
 
 Built solo for the Meta Global AI Developer Hackathon (Oct 27 – Nov 4, 2026), Indie Developer track. **All code in this repository was written during the hackathon**; see the commit history.
 
+**Live product:** https://camtoshop.com
+
 ## Meta models, and what each one does
 
 | Step | Model |
@@ -38,7 +40,8 @@ Built solo for the Meta Global AI Developer Hackathon (Oct 27 – Nov 4, 2026), 
 | Direct the Reel: hook, giant on-screen claims, cutaways, emphasized words, end card | **Muse Spark** (agent) |
 | Review the finished Reel and send a corrected direction | **Muse Spark** (agent loop) |
 | Track the product (boxes) and cut out speaker + product (masks) frame by frame | **SAM 3.1** + `meta-sam-parser` |
-| Catalog photos, cover shot, product-in-use scenes, end card, ad creatives | **Muse Image** (edits from the SAM cutout) |
+| Direct every shot of a photo Reel in the look the merchant chose | **Muse Wonder 1.0** |
+| Shoot those shots from the real product photo, plus catalog photos and ad creatives | **Muse Image** (always labeled as AI on screen) |
 | Listing and ad copy, in several languages | **Muse Spark** |
 | Publish the product and the Reel | **Meta Graph API** (Catalog `items_batch`, Instagram Reels resumable upload) |
 
@@ -75,11 +78,11 @@ tests/           Domain tests with fake adapters (no network, no credits)
 
 ## Brand kit
 
-Each merchant sets a logo, colors, lettering, look (Bold, Color, Clean) and music in the portal. Every Reel follows them, and any Reel can be rendered again with another look without calling the AI models. The three music tracks are composed from scratch by `scripts/hacer_musica.py`, so they carry no third-party rights; merchants can upload their own. Instagram's music library is not available through the publishing API.
+Each merchant sets a logo, colors, lettering, music and one of **ten looks**: Cinema, Magazine, Studio, Night, Macro, Home, Sale, Analog, Surreal and Mono. A look is a full direction, not a color swap: its own art brief for Muse Wonder, pacing, transitions, typography, color grade and suggested music, with cuts landing on the beat (`camtoshop/dominio/estilos.py`). Any Reel can be re-made in another look; shots already made for a look are reused. The price shot always shows the real product cut out by SAM. The six music tracks are composed from scratch by `scripts/hacer_musica.py`, so they carry no third-party rights; merchants can upload their own. Instagram's music library is not available through the publishing API.
 
 ## What runs where
 
-The merchant flow (WhatsApp, photo and Shopify Reels, portal, daily agent) is deployed on **Cloud Run**, scaling to zero, with data on a Cloud Storage volume and Cloud Scheduler for the morning proposal. The talking-video pipeline needs local alignment models and runs in the local setup.
+The merchant flow (WhatsApp, photo and Shopify Reels, portal, daily agent) is deployed on **Cloud Run**, scaling to zero, with data on a Cloud Storage volume and Cloud Scheduler for the morning proposal. Shopify is switched off in the portal for now. The talking-video pipeline needs local alignment models and runs in the local setup.
 
 During the hackathon the line uses Meta's WhatsApp test number, limited to 5 verified recipients, and the Meta app isn't reviewed yet, so only accounts with a role in the app can connect Instagram.
 
@@ -111,4 +114,6 @@ Shopify publishes first, so the Meta catalog item can link to the product page a
 
 ## Credits
 
-Barlow Condensed font: SIL Open Font License (see `camtoshop/assets/fonts/OFL.txt`).
+Barlow Condensed, Caveat, Playfair Display and Poppins fonts: SIL Open Font License (see `camtoshop/assets/fonts/OFL.txt`).
+
+Code: MIT License (see `LICENSE`). Fonts keep their own license.
