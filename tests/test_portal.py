@@ -141,7 +141,7 @@ def test_marca_valida_se_guarda_y_la_invalida_no():
     portal, _, c = montar()
     portal.guardar_marca(c, {"estilo": "color", "fuente": "poppins", "primario": "#B3261E",
                              "secundario": "#FFE9C9", "musica": "calida"})
-    assert c.marca.estilo == "color"
+    assert c.marca.estilo == "estudio"  # el nombre antiguo pasa al catálogo nuevo
     with pytest.raises(ErrorPortal):
         portal.guardar_marca(c, {"estilo": "color", "fuente": "comic", "primario": "#B3261E",
                                  "secundario": "#FFE9C9", "musica": "calida"})

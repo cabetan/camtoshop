@@ -118,6 +118,63 @@ def elegante():
     return pista + sala(colchon, 2, .3) + sala(piano, 2, .4)
 
 
+def pulso():
+    bpm, compases = 110, 8
+    negra = 60 / bpm
+    pista, bajo, brillo = (np.zeros(int(negra * 4 * compases * SR)) for _ in range(3))
+    acordes = [(38, 62, 65, 69), (34, 62, 65, 70), (41, 60, 65, 69), (36, 60, 64, 67)]  # Dm Bb F C
+    for c in range(compases):
+        raiz, *notas = acordes[c % 4]
+        ini = c * 4 * negra
+        for b in range(4):
+            sumar(pista, bombo(.4), ini + b * negra, .9)
+            sumar(pista, ruido(.05, 80), ini + (b + .5) * negra, .3)
+        sumar(pista, ruido(.35, 12, False), ini + 2 * negra, .3)
+        for s16 in range(16):
+            sumar(bajo, tono(hz(raiz), .16, (1, .7, .4, .2), .003, 8), ini + s16 * negra / 4, .34 if s16 % 4 else .5)
+        for i, paso in enumerate((0, .75, 1.5, 2.25, 3, 3.5)):
+            sumar(brillo, tono(hz(notas[i % 3] + 12), .3, (1, .5, .3, .2), .003, 9), ini + paso * negra, .14)
+    return pista + bajo + sala(eco(brillo, negra * .75, .4), mezcla=.25)
+
+
+def tarde():
+    bpm, compases = 92, 8
+    negra = 60 / bpm
+    pista, cuerdas, bajo = (np.zeros(int(negra * 4 * compases * SR)) for _ in range(3))
+    acordes = [(43, 59, 62, 67, 71), (40, 59, 64, 67, 71), (48, 60, 64, 67, 72), (38, 57, 62, 66, 69)]  # G Em C D
+    for c in range(compases):
+        raiz, *notas = acordes[c % 4]
+        ini = c * 4 * negra
+        sumar(pista, bombo(.3), ini, .55)
+        sumar(pista, bombo(.3), ini + 2 * negra, .45)
+        for b in (1, 3):
+            sumar(pista, ruido(.1, 40, False), ini + b * negra, .18)
+        sumar(bajo, tono(hz(raiz), negra * 1.5, (1, .4), .01, 2), ini, .45)
+        sumar(bajo, tono(hz(raiz + 12), negra, (1, .4), .01, 3), ini + 2.5 * negra, .3)
+        for i, paso in enumerate((0, .5, 1, 1.5, 2, 2.5, 3, 3.5)):  # guitarra punteada
+            n = notas[(0, 2, 1, 3, 0, 2, 3, 1)[i]]
+            sumar(cuerdas, tono(hz(n), negra * 1.2, (1, .6, .35, .2, .1), .003, 4), ini + paso * negra, .16)
+    return pista + bajo + sala(cuerdas, mezcla=.2)
+
+
+def cinematica():
+    bpm, compases = 60, 8
+    negra = 60 / bpm
+    pista, cuerdas, golpes = (np.zeros(int(negra * 4 * compases * SR)) for _ in range(3))
+    acordes = [(38, 57, 62, 65), (34, 58, 62, 65), (36, 55, 60, 64), (33, 57, 61, 64)]  # Dm Bb C A
+    for c in range(compases):
+        raiz, *notas = acordes[c % 4]
+        ini = c * 4 * negra
+        sumar(golpes, tono(hz(raiz - 12), 2.4, (1, .5, .2), .004, 1.6), ini, .8)
+        sumar(golpes, ruido(.9, 5, False), ini, .12)
+        sumar(golpes, tono(hz(raiz - 12), 1.2, (1, .5), .004, 3), ini + 2 * negra, .4)
+        sumar(cuerdas, tono(hz(raiz), negra * 4.4, (1, .5, .3, .15), 1.0, .25), ini, .2)
+        for n in notas:
+            sumar(cuerdas, tono(hz(n), negra * 4.4, (1, .45, .22, .1), 1.3, .22), ini, .12)
+        sumar(cuerdas, tono(hz(notas[-1] + 12), negra * 3, (1, .2), .4, .9), ini + negra, .1)
+    return pista + sala(cuerdas, 2.4, .4) + sala(golpes, 2.4, .3)
+
+
 def exportar(nombre, pista):
     estereo = np.stack([pista, np.roll(pista, 90)], 1)
     estereo = estereo / np.abs(estereo).max() * .89
@@ -129,6 +186,7 @@ def exportar(nombre, pista):
 
 if __name__ == "__main__":
     DESTINO.mkdir(parents=True, exist_ok=True)
-    for nombre, pista in (("energia", energia()), ("calida", calida()), ("elegante", elegante())):
+    for nombre, pista in (("energia", energia()), ("calida", calida()), ("elegante", elegante()),
+                          ("pulso", pulso()), ("tarde", tarde()), ("cinematica", cinematica())):
         exportar(nombre, pista)
         print(nombre, f"{len(pista) / SR:.1f} s")

@@ -51,11 +51,12 @@
   .pasos li { counter-increment: paso; }
   .pasos li::before { content: counter(paso); display: block; font: 900 80px/.9 var(--titular); }
   h3 { font: 800 30px/1.05 var(--titular); margin: 8px 0; }
-  .aspectos { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 16px; margin-top: 40px; }
+  .aspectos { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 16px; margin-top: 40px; }
   .aspectos figure { margin: 0; }
   .aspectos video { display: block; width: 100%; aspect-ratio: 9 / 16; border-radius: 8px; background: var(--tinta); }
   figcaption { margin-top: 10px; }
-  figcaption b { display: block; font: 800 28px/1.1 var(--titular); }
+  figcaption b { display: block; font: 800 26px/1.1 var(--titular); }
+  figcaption span { font-size: 16px; line-height: 1.3; display: block; }
   .notas { margin-top: 32px; max-width: 42em; }
 
   .negro { background: var(--tinta); color: var(--papel); padding: clamp(48px, 7vw, 96px) 0; }
@@ -67,6 +68,7 @@
   .cierre h2 { margin-bottom: 28px; }
   footer { display: flex; flex-wrap: wrap; gap: 8px 24px; justify-content: space-between; padding-top: 48px; font-size: 16px; font-weight: 500; }
 
+  @media (max-width: 1000px) { .aspectos { grid-template-columns: repeat(3, minmax(0, 1fr)); } }
   @media (max-width: 760px) {
     .portada, .pasos, .razones { grid-template-columns: minmax(0, 1fr); }
     h1 { font-size: clamp(58px, 18.5vw, 104px); }
@@ -102,7 +104,7 @@
         <div class="globo dos" data-t="globo_dos"></div>
       </div>
       <div class="telefono">
-        <video id="principal" src="/estatico/demo/color.mp4" autoplay muted loop playsinline data-t-alt="video_alt"></video>
+        <video id="principal" autoplay muted loop playsinline data-t-alt="video_alt"></video>
         <button class="sonido" id="sonido" data-t="sonido_on"></button>
       </div>
     </div>
@@ -123,11 +125,7 @@
 <section class="blanco sin-tope">
   <div class="ancho">
     <h2 data-t="estilos_titulo"></h2>
-    <div class="aspectos">
-      <figure><video src="/estatico/demo/impacto.mp4#t=1" controls playsinline preload="metadata"></video><figcaption><b data-t="estilo_impacto"></b><span data-t="estilo_impacto_t"></span></figcaption></figure>
-      <figure><video src="/estatico/demo/color.mp4#t=1" controls playsinline preload="metadata"></video><figcaption><b data-t="estilo_color"></b><span data-t="estilo_color_t"></span></figcaption></figure>
-      <figure><video src="/estatico/demo/limpio.mp4#t=1" controls playsinline preload="metadata"></video><figcaption><b data-t="estilo_limpio"></b><span data-t="estilo_limpio_t"></span></figcaption></figure>
-    </div>
+    <div class="aspectos" id="aspectos"></div>
     <p class="notas" data-t="estilos_nota"></p>
   </div>
 </section>
@@ -150,6 +148,21 @@
   <footer><span data-t="pie"></span><a href="https://www.instagram.com/camtoshop.app/" rel="noopener">@camtoshop.app</a></footer>
 </div>
 <script>
+  const ESTILOS = ["cine", "revista", "estudio", "noche", "macro", "hogar", "oferta", "analogo", "surreal", "monocromo"];
+  const muestra = (id, extension = "mp4") => `/estatico/demo/estilos/${idioma === "es" ? "es" : "en"}/${id}.${extension}`;
+  function pintarEstilos() {
+    document.getElementById("principal").src = muestra("cine");
+    document.getElementById("aspectos").replaceChildren(...ESTILOS.map(id => {
+      const figura = document.createElement("figure"), video = document.createElement("video");
+      Object.assign(video, { src: muestra(id), poster: muestra(id, "jpg"), controls: true, playsInline: true, preload: "none" });
+      const pie = document.createElement("figcaption"), nombre = document.createElement("b"), texto = document.createElement("span");
+      nombre.textContent = t("estilo_" + id); texto.textContent = t(`estilo_${id}_c`);
+      pie.append(nombre, texto); figura.append(video, pie);
+      return figura;
+    }));
+  }
+  document.addEventListener("idioma", pintarEstilos);
+  document.addEventListener("DOMContentLoaded", pintarEstilos);
   const video = document.getElementById("principal"), boton = document.getElementById("sonido");
   const rotular = () => { boton.dataset.t = video.muted ? "sonido_on" : "sonido_off"; boton.textContent = t(boton.dataset.t); };
   boton.onclick = () => {

@@ -1,15 +1,19 @@
 const $ = id => document.getElementById(id);
 const LINEA = "15550321707";
-const ESTILOS = [{ id: "impacto" }, { id: "color" }, { id: "limpio" }];
+const ESTILOS = [
+  { id: "cine", fuente: "playfair", musica: "elegante" }, { id: "revista", fuente: "playfair", musica: "cinematica" },
+  { id: "estudio", fuente: "poppins", musica: "pulso" }, { id: "noche", fuente: "barlow", musica: "pulso" },
+  { id: "macro", fuente: "playfair", musica: "elegante" }, { id: "hogar", fuente: "poppins", musica: "tarde" },
+  { id: "oferta", fuente: "barlow", musica: "energia" }, { id: "analogo", fuente: "caveat", musica: "tarde" },
+  { id: "surreal", fuente: "playfair", musica: "cinematica" }, { id: "monocromo", fuente: "barlow", musica: "cinematica" },
+];
 const FUENTES = [
   { id: "barlow", css: '900 30px "Barlow Condensed"' },
   { id: "playfair", css: '800 24px "Playfair Display"' },
   { id: "poppins", css: '800 22px Poppins' },
   { id: "caveat", css: '700 30px Caveat' },
 ];
-const PISTAS = [{ id: "energia" }, { id: "calida" }, { id: "elegante" }, { id: "propia" }, { id: "ninguna" }];
-const ESCALA_PREVIA = { barlow: [46, 1], playfair: [30, 1.08], poppins: [28, 1.1], caveat: [40, .95] };
-const CLARO = "#F7F6F2", OSCURO = "#141414";
+const PISTAS = ["energia", "pulso", "calida", "tarde", "elegante", "cinematica", "propia", "ninguna"].map(id => ({ id }));
 
 let propuestaActual = null, descartados = [];
 let yo = null, reels = [], reelAbierto = null, elegidoReel = null, sondeo = null, audio = null, registrando = true;
@@ -38,23 +42,6 @@ function crear(etiqueta, propiedades = {}, ...hijos) {
   const n = Object.assign(document.createElement(etiqueta), propiedades);
   n.append(...hijos);
   return n;
-}
-
-// --- Colores: la misma regla de contraste del render ---------------------------------
-
-function luz(hex) {
-  const [r, g, b] = [1, 3, 5].map(i => parseInt(hex.slice(i, i + 2), 16) / 255)
-    .map(c => c <= .03928 ? c / 12.92 : ((c + .055) / 1.055) ** 2.4);
-  return .2126 * r + .7152 * g + .0722 * b;
-}
-function contraste(a, b) { const [x, y] = [luz(a), luz(b)].sort((m, n) => n - m); return (x + .05) / (y + .05); }
-function legible(fondo) { return contraste(fondo, "#FFFFFF") >= contraste(fondo, OSCURO) ? "#FFFFFF" : OSCURO; }
-function acento(fondo, ...colores) { return colores.find(c => contraste(c, fondo) >= 2.5) || legible(fondo); }
-function tema(m) {
-  if (m.estilo === "color") return { fondo: m.primario, texto: legible(m.primario), acento: acento(m.primario, m.secundario) };
-  if (m.estilo === "limpio") return { fondo: CLARO, texto: OSCURO, acento: acento(CLARO, m.primario, m.secundario) };
-  const sobreFoto = [m.primario, m.secundario].find(c => contraste(c, OSCURO) >= 4.5) || "#FFFFFF";
-  return { fondo: "", texto: "#FFFFFF", acento: sobreFoto };
 }
 
 // --- Navegación --------------------------------------------------------------------
@@ -87,7 +74,7 @@ function pintarPasos(e) {
   const pasos = [
     [t("paso_instagram"), !!e.instagram, "conexiones"],
     [t("paso_celular"), e.celulares.length > 0, "conexiones"],
-    [t("paso_marca"), e.marca.logo || e.marca.estilo !== "impacto" || e.marca.primario !== "#FFD23F", "marca"],
+    [t("paso_marca"), e.marca.logo || e.marca.estilo !== "cine" || e.marca.primario !== "#FFD23F", "marca"],
   ];
   const caja = $("pasos"); caja.textContent = "";
   caja.hidden = pasos.every(p => p[1]);
@@ -176,13 +163,15 @@ function grupo(titulo, opciones, clase, valor, alCambiar, armar) {
   return crear("fieldset", {}, crear("legend", { textContent: titulo }), caja);
 }
 
-function tarjetaEstilo(m) {
-  return o => {
-    const aspecto = tema({ ...m, estilo: o.id });
-    const muestra = crear("span", { className: "muestra" });
-    muestra.style.background = aspecto.fondo || `url(${productoPrevio()}) center / cover, #555`;
-    return crear("span", {}, muestra, crear("b", { textContent: t("estilo_" + o.id) }), crear("em", { textContent: t(`estilo_${o.id}_c`) }));
-  };
+function muestraDe(id, extension = "mp4") {
+  return `/estatico/demo/estilos/${idioma === "es" ? "es" : "en"}/${id}.${extension}`;
+}
+
+function tarjetaEstilo(o) {
+  const video = crear("video", { className: "muestra", muted: true, loop: true, playsInline: true, preload: "none", poster: muestraDe(o.id, "jpg"), src: muestraDe(o.id) });
+  video.onmouseenter = () => video.play().catch(() => {});
+  video.onmouseleave = () => video.pause();
+  return crear("span", {}, video, crear("b", { textContent: t("estilo_" + o.id) }), crear("em", { textContent: t(`estilo_${o.id}_c`) }));
 }
 
 function tarjetaFuente(o) {
@@ -223,11 +212,23 @@ function pistasDisponibles() {
 function controles(caja, m, cambiar) {
   caja.textContent = "";
   caja.append(
-    grupo(t("estilo"), ESTILOS, "tres", m.estilo, v => cambiar("estilo", v, true), tarjetaEstilo(m)),
+    grupo(t("estilo"), ESTILOS, "diez", m.estilo, v => {
+      const sugerido = ESTILOS.find(e => e.id === v);
+      cambiar("fuente", sugerido.fuente);
+      if (m.musica !== "propia") cambiar("musica", sugerido.musica);
+      cambiar("estilo", v, true);
+    }, tarjetaEstilo),
     colores(m, (c, v) => cambiar(c, v)),
     grupo(t("letra"), FUENTES, "dos", m.fuente, v => cambiar("fuente", v), tarjetaFuente),
     grupo(t("musica"), pistasDisponibles(), "dos", m.musica, v => cambiar("musica", v), tarjetaPista),
   );
+}
+
+function controlesReel() {
+  controles($("d-controles"), elegidoReel, (c, v, redibujar) => {
+    elegidoReel[c] = v;
+    if (redibujar) controlesReel();
+  });
 }
 
 function abrir(id) {
@@ -235,7 +236,7 @@ function abrir(id) {
   const r = reels.find(x => x.id === id);
   elegidoReel = { ...yo.marca, ...r.marca };
   $("video").src = r.tiene_video ? `/portal/reels/${id}/video?${Date.now()}` : "";
-  controles($("d-controles"), elegidoReel, (c, v) => { elegidoReel[c] = v; });
+  controlesReel();
   pintarDetalle(r);
   ir("detalle");
 }
@@ -254,27 +255,12 @@ function pintarDetalle(r) {
 
 // --- Estudio de marca --------------------------------------------------------------------
 
-function productoPrevio() {
-  const r = reels.find(x => x.tiene_video);
-  return r ? `/portal/reels/${r.id}/producto` : "/estatico/demo/producto.png";
-}
-
 function pintarCuadro() {
   if (!yo) return;
-  const m = yo.marca, aspecto = tema(m), [tamano, interlinea] = ESCALA_PREVIA[m.fuente];
-  const css = FUENTES.find(f => f.id === m.fuente).css.split(" ");
-  const cuadro = $("cuadro"); cuadro.textContent = "";
-  cuadro.style.background = aspecto.fondo || "#333";
-  if (!aspecto.fondo) {
-    const f = crear("div", { className: "fondo" }); f.style.backgroundImage = `url(${productoPrevio()})`;
-    cuadro.append(f);
-  }
-  const frase = crear("div", { className: "frase" }, crear("b", { textContent: t("previa_frase") }), crear("b", { textContent: "$45.000" }));
-  frase.style.cssText = `font-family:${css.slice(2).join(" ")};font-weight:${css[0]};font-size:${tamano / 3.04}cqw;line-height:${interlinea};color:${aspecto.texto}`;
-  frase.lastChild.style.color = aspecto.acento;
-  cuadro.append(frase, crear("img", { className: "producto", src: productoPrevio(), alt: "" }));
-  if (m.logo) cuadro.append(crear("img", { className: "marca-logo", src: "/portal/marca/logo?" + (pintarCuadro.vez || 0), alt: "" }));
-  $("cuadro-pie").textContent = t("previa_musica", { pista: t("pista_" + m.musica) });
+  const video = $("cuadro-video"), fuente = muestraDe(yo.marca.estilo);
+  if (video.getAttribute("src") !== fuente) { video.src = fuente; video.play().catch(() => {}); }
+  $("cuadro-nombre").textContent = t("estilo_" + yo.marca.estilo);
+  $("cuadro-pie").textContent = t("previa_musica", { pista: t("pista_" + yo.marca.musica) });
 }
 
 function pintarLogo(e) {
@@ -394,7 +380,7 @@ $("d-aplicar").onclick = () => hacer(async () => {
 document.addEventListener("idioma", () => {
   if (!yo) { modo(registrando); return; }
   pintar(yo); refrescarEstudio(); cargarReels().catch(() => {}); cargarPropuesta().catch(() => {});
-  if (reelAbierto) controles($("d-controles"), elegidoReel, (c, v) => { elegidoReel[c] = v; });
+  if (reelAbierto) controlesReel();
 });
 
 async function iniciar() {

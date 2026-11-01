@@ -99,6 +99,12 @@ class Escenografo(Protocol):
         """El producto real (desde su recorte) en una escena de uso, en vertical."""
 
 
+class DirectorDeArte(Protocol):
+    def planos(self, analisis, guion, foto: Path, recorte: Path | None) -> list[Path]:
+        """Un plano fotografiado por cada texto del guion, según el estilo de la marca."""
+        ...
+
+
 class RenderizadorDeFotos(Protocol):
     def render(self, tomas: list["Toma"], fotos: list[Path], recortes: list[Path | None], escenas: list[Path],
                voz: Path | None, destino: Path, nombre: str = "") -> Path:

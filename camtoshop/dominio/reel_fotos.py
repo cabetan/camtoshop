@@ -120,9 +120,9 @@ def precio_respaldado(precio: Precio | None, fuente: str) -> bool:
     return precio is not None and round(precio.monto, 2) in montos_en(fuente)
 
 
-def lineas_de(texto: str, max_caracteres: int = 14) -> tuple[str, ...]:
+def lineas_de(texto: str, max_caracteres: int = 14, mayusculas: bool = True) -> tuple[str, ...]:
     """Parte el texto en 1 a 3 líneas parejas para la tipografía gigante."""
-    palabras = texto.upper().split()
+    palabras = (texto.upper() if mayusculas else texto).split()
     if not palabras:
         return ()
     lineas: list[str] = []
@@ -138,28 +138,31 @@ def lineas_de(texto: str, max_caracteres: int = 14) -> tuple[str, ...]:
 
 
 def armar_tomas(guion: Guion, fotos: int, escenas: int, precio: Precio | None,
-                duracion_voz: float | None = None) -> list[Toma]:
+                duracion_voz: float | None = None, ritmo: float = 1.0, pulso: float = 0.0,
+                mayusculas: bool = True) -> list[Toma]:
     """Reparte el guion en tomas: gancho, beneficios (alternando fotos y escenas), precio y cierre.
 
     Las fotos reales se usan en orden y se repiten si hay pocas. Con nota de voz, los beneficios
-    se estiran para que el Reel dure lo que dura la voz (dentro de DURACION).
+    se estiran para que el Reel dure lo que dura la voz (dentro de DURACION). `ritmo` acelera o
+    frena el montaje y `pulso`, en segundos, hace que cada corte caiga en un golpe de la música.
     """
     if fotos < 1:
         raise ValueError("Hace falta al menos una foto del producto.")
-    plan: list[tuple[str, tuple[str, ...], int]] = [("gancho", lineas_de(guion.gancho), 0)]
+    partir = lambda texto: lineas_de(texto, mayusculas=mayusculas)
+    plan: list[tuple[str, tuple[str, ...], int]] = [("gancho", partir(guion.gancho), 0)]
     siguiente_foto, siguiente_escena = 1, 0
     for n, beneficio in enumerate(guion.beneficios):
         if n % 2 == 1 and siguiente_escena < escenas:
-            plan.append(("escena", lineas_de(beneficio), siguiente_escena))
+            plan.append(("escena", partir(beneficio), siguiente_escena))
             siguiente_escena += 1
         else:
-            plan.append(("beneficio", lineas_de(beneficio), siguiente_foto % fotos))
+            plan.append(("beneficio", partir(beneficio), siguiente_foto % fotos))
             siguiente_foto += 1
     if precio is not None:
         plan.append(("precio", (precio.texto(),), 0))
-    plan.append(("cierre", lineas_de(guion.llamado), siguiente_foto % fotos))
+    plan.append(("cierre", partir(guion.llamado), siguiente_foto % fotos))
 
-    duraciones = [SEGUNDOS[tipo] for tipo, _, _ in plan]
+    duraciones = [SEGUNDOS[tipo] * ritmo for tipo, _, _ in plan]
     total = sum(duraciones)
     objetivo = min(max(duracion_voz + 0.6 if duracion_voz else total, DURACION[0]), DURACION[1])
     elasticas = [i for i, (tipo, _, _) in enumerate(plan) if tipo in {"beneficio", "escena"}] or [0]
@@ -169,8 +172,11 @@ def armar_tomas(guion: Guion, fotos: int, escenas: int, precio: Precio | None,
 
     tomas, t = [], 0.0
     for n, ((tipo, lineas, imagen), d) in enumerate(zip(plan, duraciones)):
-        tomas.append(Toma(tipo, round(t, 3), round(t + d, 3), lineas, imagen, MOVIMIENTOS[n % len(MOVIMIENTOS)]))
-        t += d
+        fin = t + d
+        if pulso and not duracion_voz:  # con voz manda la voz, no la música
+            fin = max(t + pulso, round(fin / pulso) * pulso)
+        tomas.append(Toma(tipo, round(t, 3), round(fin, 3), lineas, imagen, MOVIMIENTOS[n % len(MOVIMIENTOS)]))
+        t = fin
     return tomas
 
 
@@ -187,6 +193,8 @@ class PuertosFotos:
     escenografo: object  # Escenografo
     renderizador: object  # RenderizadorDeFotos
     revisor: object | None = None  # RevisorDeFotos
+    arte: object | None = None  # DirectorDeArte: con él, cada Reel se dirige según el estilo de la marca
+    tomas: dict = field(default_factory=dict)  # ritmo, pulso y mayúsculas del estilo
 
 
 @dataclass
@@ -220,14 +228,20 @@ def reel_desde_fotos(analisis, texto: str, fotos: list, recortes: list, precio: 
     reales = [r for r in recortes if r is not None]
     necesarias = len(guion.beneficios) // 2
     escenas = []
-    if reales and necesarias:
+    if p.arte is not None:
+        anotar("Muse Wonder dirige los planos y Muse Image los fotografía")
+        try:
+            escenas = p.arte.planos(analisis, guion, fotos[principal], reales[0] if reales else None)
+        except Exception as e:  # sin planos el Reel se monta con las fotos reales
+            anotar(f"No se pudieron hacer los planos: {e}")
+    elif reales and necesarias:
         anotar("Muse Image pone el producto real en una escena de uso")
         escenas = [p.escenografo.escena(d, reales[0]) for d in guion.escenas[:necesarias]]
 
     nombre = analisis.nombre
     precio_texto = precio.texto() if precio else ""
     for ronda in range(rondas + 1):
-        tomas = armar_tomas(guion, len(fotos), len(escenas), precio, duracion_voz)
+        tomas = armar_tomas(guion, len(fotos), 0 if p.arte else len(escenas), precio, duracion_voz, **p.tomas)
         anotar(f"Renderizando {tomas[-1].fin:.0f} s: producto recortado con SAM, en capas")
         p.renderizador.render(tomas, fotos, recortes, escenas, voz, destino, nombre)
         if p.revisor is None or ronda == rondas:

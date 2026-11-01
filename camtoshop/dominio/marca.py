@@ -5,9 +5,10 @@ from __future__ import annotations
 import re
 from dataclasses import dataclass
 
-ESTILOS = ("impacto", "color", "limpio")  # foto de fondo | color de marca | fondo claro
+from camtoshop.dominio.estilos import ANTIGUOS, ESTILO_INICIAL, ESTILOS, estilo_de
+
 FUENTES = ("barlow", "playfair", "poppins", "caveat")
-MUSICAS = ("energia", "calida", "elegante", "propia", "ninguna")
+MUSICAS = ("energia", "calida", "elegante", "pulso", "tarde", "cinematica", "propia", "ninguna")
 _HEX = re.compile(r"^#[0-9a-fA-F]{6}$")
 CLARO = "#F7F6F2"
 OSCURO = "#141414"
@@ -15,13 +16,16 @@ OSCURO = "#141414"
 
 @dataclass
 class Marca:
-    estilo: str = "impacto"
-    fuente: str = "barlow"
+    estilo: str = ESTILO_INICIAL
+    fuente: str = "playfair"
     primario: str = "#FFD23F"
     secundario: str = "#141414"
-    musica: str = "energia"
+    musica: str = "elegante"
     logo: bool = False  # el comercio subió logo
     musica_propia: bool = False  # el comercio subió su pista
+
+    def __post_init__(self):
+        self.estilo = ANTIGUOS.get(self.estilo, self.estilo)
 
 
 @dataclass(frozen=True)
@@ -69,8 +73,9 @@ def _acento_legible(fondo: str, *candidatos: str, minimo: float = 2.5) -> str:
 def tema_de(m: Marca) -> Tema:
     """El texto siempre debe leerse: un color de marca sin contraste cede ante blanco o negro."""
     sobre_foto = _acento_legible(OSCURO, m.primario, m.secundario, minimo=4.5)  # una foto es un fondo irregular
-    if m.estilo == "color":
+    fondo = estilo_de(m.estilo).fondo
+    if fondo == "marca":
         return Tema(m.fuente, legible_sobre(m.primario), _acento_legible(m.primario, m.secundario), m.primario, sobre_foto)
-    if m.estilo == "limpio":
+    if fondo == "claro":
         return Tema(m.fuente, OSCURO, _acento_legible(CLARO, m.primario, m.secundario), CLARO, sobre_foto)
     return Tema(m.fuente, "#FFFFFF", sobre_foto, "", sobre_foto)

@@ -25,6 +25,7 @@ import requests
 
 from camtoshop.adaptadores import cache
 from camtoshop.adaptadores.config import canal_conectado, secreto
+from camtoshop.adaptadores.director_arte import DirectorMuse
 from camtoshop.adaptadores.fotos_meta import AnalizadorFotosSpark, EscenografoMuse, GuionistaSpark, RevisorFotosSpark
 from camtoshop.adaptadores.meta_api import ClienteMeta
 from camtoshop.adaptadores.meta_comercio import CatalogoMeta, InstagramReels
@@ -33,7 +34,7 @@ from camtoshop.adaptadores.reel_meta import (
     DirectorSpark, EditorSpark, IlustradorMuse, RastreadorSAM, RevisorSpark, TranscriptorMeta,
 )
 from camtoshop.adaptadores.render_ffmpeg import RenderizadorFFmpeg
-from camtoshop.adaptadores.render_fotos import RenderizadorFotos
+from camtoshop.adaptadores.render_dirigido import RenderizadorDirigido
 from camtoshop.adaptadores.repo_comercios import RepoComercios
 from camtoshop.adaptadores.sam_mascaras import mascaras
 from camtoshop.adaptadores.shopify import TiendaShopify, token_por_credenciales
@@ -49,6 +50,7 @@ from camtoshop.dominio.producto import (
 from camtoshop.dominio.publicacion import pie_de_instagram, publicar
 from camtoshop.dominio.marca import Marca, tema_de
 from camtoshop.dominio.publicacion import canales_de_destino
+from camtoshop.dominio.estilos import PULSOS, estilo_de
 from camtoshop.dominio.reel_fotos import Guion, PuertosFotos, armar_tomas, precio_respaldado, reel_desde_fotos
 
 RAIZ = Path(__file__).resolve().parents[2]
@@ -376,7 +378,7 @@ class Servicio:
         marca = comercio.marca if comercio else Marca()
         return replace(marca, **(pr.estado.get("marca_reel") or {}) if pr else {}), comercio.id if comercio else ""
 
-    def _render_fotos(self, analisis: Analisis | None = None, pr: Proyecto | None = None) -> RenderizadorFotos:
+    def _render_fotos(self, analisis: Analisis | None = None, pr: Proyecto | None = None) -> RenderizadorDirigido:
         c = self.cliente
         conceptos = (analisis.conceptos_sam if analisis else []) + ["product"]
         marca, comercio_id = self._marca_de(pr)
@@ -386,13 +388,20 @@ class Servicio:
             musica = musica if musica.exists() else None
         else:
             musica = None if marca.musica == "ninguna" else PISTAS / f"{marca.musica}.m4a"
-        return RenderizadorFotos(lambda concepto, img, fuente, salida: mascaras(c, concepto, img, fuente, salida),
-                                 conceptos, tema_de(marca), logo, musica)
+        comercio = self.repo_comercios.obtener(comercio_id) if comercio_id else None
+        return RenderizadorDirigido(lambda concepto, img, fuente, salida: mascaras(c, concepto, img, fuente, salida),
+                                    conceptos, tema_de(marca), logo, musica, marca.estilo, marca.primario,
+                                    comercio.nombre if comercio else "")
 
     def _puertos_fotos(self, pr: Proyecto, analisis: Analisis) -> PuertosFotos:
         c = self.cliente
+        marca, comercio_id = self._marca_de(pr)
+        comercio = self.repo_comercios.obtener(comercio_id) if comercio_id else None
+        estilo = estilo_de(marca.estilo)
         return PuertosFotos(GuionistaSpark(c), EscenografoMuse(c, pr.ruta("trabajo") / "escenas"),
-                            self._render_fotos(analisis, pr), RevisorFotosSpark(c))
+                            self._render_fotos(analisis, pr), RevisorFotosSpark(c),
+                            DirectorMuse(c, pr.ruta("trabajo") / "planos", estilo, marca, comercio.nombre if comercio else ""),
+                            {"ritmo": estilo.ritmo, "pulso": PULSOS.get(marca.musica, 0.0), "mayusculas": False})
 
     def _voz(self, pr: Proyecto) -> Path | None:
         return next(pr.ruta("material").glob("voz.*"), None)
@@ -477,7 +486,7 @@ class Servicio:
         self._guardar_reel_fotos(pr, r)
 
     def reestilizar(self, pr: Proyecto, cambios: dict):
-        """Mismo guion, otro aspecto: no gasta IA y el Reel nuevo pide aprobación como cualquier otro."""
+        """Mismo guion, otro estilo: los planos de un estilo ya usado no se repiten y el Reel pide aprobación."""
         pr.guardar(fase="procesando", progreso=50, marca_reel=cambios)
         self._cola.submit(self._reestilo, pr)
 
@@ -492,10 +501,11 @@ class Servicio:
             guardado = pr.estado["reels"][LOOK_FOTOS]
             guion = Guion(**guardado["guion"])
             reales = [r for r in recortes if r is not None]
-            escenas = [p.escenografo.escena(d, reales[0]) for d in guion.escenas[:len(guion.beneficios) // 2]] if reales else []
+            principal = int(analisis.mejor_cuadro_s) if int(analisis.mejor_cuadro_s) < len(fotos) else 0
+            escenas = p.arte.planos(analisis, guion, fotos[principal], reales[0] if reales else None)
             voz = self._voz(pr)
             duracion = guardado["duracion"] - 0.6 if voz else None
-            tomas = armar_tomas(guion, len(fotos), len(escenas), ficha_de_json(pr.estado["ficha"]).precio, duracion)
+            tomas = armar_tomas(guion, len(fotos), 0, ficha_de_json(pr.estado["ficha"]).precio, duracion, **p.tomas)
             destino = pr.ruta(f"reel_fotos_{int(time.time())}.mp4")
             render.render(tomas, fotos, recortes, escenas, voz, destino, analisis.nombre)
             pr.guardar(reels={**pr.estado["reels"], LOOK_FOTOS: {**guardado, "archivo": pr.relativa(destino)}})
